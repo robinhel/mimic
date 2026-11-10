@@ -1,0 +1,90 @@
+[
+  {
+    "conditionId": "0x9b9c693020bd625462107ea7963bacfefe73e678dd0e001c2d11388395a3cc2e",
+    "question": "Will San Antonio Spurs win the 2027 NBA Finals?",
+    "description": "This market will resolve to \"Yes\" if the listed team is determined as the champion of the NBA for the 2026-27 season. Otherwise, it will resolve to \"No\".\n\nIf at any point it becomes impossible for a listed team to be named as the champion of NBA for the 2026-27 season per the rules of NBA (e.g., participant is eliminated), the corresponding market will resolve to \"No\".\n\nIf multiple teams are declared winners, this market will resolve in favor of the team whose listed name comes first alphabetically.\n\nIf this event is cancelled, postponed after June 30, 2027, 11:59 PM ET, or a champion has not been declared within this timeframe, this market will resolve to \"Other\".\n\nThe resolution source will be official information from the NBA: however a consensus of credible reporting may also be used.",
+    "endDate": "2027-07-01T03:59:00Z",
+    "closed": false,
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"0.215\", \"0.785\"]",
+    "clobTokenIds": "[\"47942880964158617614279118228047750547985543191564455484169740327839925876869\", \"34079851482053293361932351143019209193108191421795047260065638898939690262262\"]",
+    "umaResolutionStatus": null,
+    "negRisk": true,
+    "slug": "will-san-antonio-spurs-win-the-2027-nba-finals",
+    "resolutionSource": null,
+    "events": [
+      {
+        "id": "478277",
+        "title": "NBA: 2027 Champion",
+        "slug": "nba-2027-champion",
+        "category": null
+      }
+    ]
+  },
+  {
+    "conditionId": "0x9b786700f51dc9540f016267a69245616f53e93563de3fc5a1ac3a16f66310c4",
+    "question": "Jensen Huang divorce by December 31, 2026?",
+    "description": "This market will resolve to \"Yes\" if Jensen or Lori Huang file for divorce or announce their definitive intention to divorce by December 31, 2026, 11:59 PM ET. Otherwise, this market will resolve to \"No\".\n\nAn announcement from either Lori or Jensen Huang, or their official authorized representatives, of their definitive intention to divorce will be sufficient for a \"Yes\" resolution, regardless of when or whether the divorce ultimately occurs. Announcements that they are considering or open to a divorce will not qualify.\n\nThe resolution source will be statements from Jensen Huang and/or Lori Huang, and their representatives, as well as relevant court records; however, a consensus of credible reporting may also be used.",
+    "endDate": "2027-01-01T04:59:00Z",
+    "closed": false,
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"0.09\", \"0.91\"]",
+    "clobTokenIds": "[\"112979941438829737800400495517316534522150056152145374913362684879882796860277\", \"111879023992805727427888007395202674359981965399934800914169457259690591042100\"]",
+    "umaResolutionStatus": null,
+    "negRisk": false,
+    "slug": "jensen-huang-divorce-in-2026",
+    "resolutionSource": "",
+    "events": [
+      {
+        "id": "1344318",
+        "title": "Jensen Huang divorce by...?",
+        "slug": "jensen-huang-divorce-in-2026",
+        "category": null
+      }
+    ]
+  },
+  {
+    "conditionId": "0x0256ef63427ed0d9eefa1422eee948165a2a215b0741a339025fb08b2cf6e15d",
+    "question": "Will Ghana win on 2026-06-17?",
+    "description": "In the upcoming game, scheduled for June 17, 2026\nIf Ghana wins, this market will resolve to \"Yes\".\nOtherwise, this market will resolve to \"No\".\nIf the game is postponed, this market will remain open until the game has been completed.\nIf the game is canceled entirely, with no make-up game, this market will resolve \"No\".\nThis market refers only to the outcome within the first 90 minutes of regular play plus stoppage time.\n\nThe primary resolution source for this market is the official statistics of the event as recognized by the governing body or event organizers. However, if the governing body or event organizers have not published final match statistics within 2 hours after the event's conclusion, a consensus of credible reporting may be used instead.",
+    "endDate": "2026-06-17T23:00:00Z",
+    "closed": true,
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"1\", \"0\"]",
+    "clobTokenIds": "[\"4583065636155233526779653080435458405485537158452842777526478181105245518840\", \"26666380871262984720893543263812272096548992179236532052125725580254060870910\"]",
+    "umaResolutionStatus": "resolved",
+    "negRisk": true,
+    "slug": "fifwc-gha-pan-2026-06-17-gha",
+    "resolutionSource": "https://www.fifa.com/fifaplus/en/tournaments/mens/worldcup",
+    "events": [
+      {
+        "id": "351737",
+        "title": "Ghana vs. Panama",
+        "slug": "fifwc-gha-pan-2026-06-17",
+        "category": null
+      }
+    ]
+  },
+  {
+    "conditionId": "0x51166276fa646ca50165f7d030c297138ed1d62dc41f6ffde21e962c44182074",
+    "question": "Will Spain vs. Argentina end in a draw?",
+    "description": "In the upcoming game, scheduled for July 19, 2026\nIf the game ends in a draw, this market will resolve to \"Yes\".\nOtherwise, this market will resolve to \"No\".\nIf the game is postponed, this market will remain open until the game has been completed.\nIf the game is canceled entirely, with no make-up game, this market will resolve to \"Yes\".\nThis market refers only to the outcome within the first 90 minutes of regular play plus stoppage time.\n\nThe primary resolution source for this market is the official statistics of the event as recognized by the governing body or event organizers. However, if the governing body or event organizers have not published final match statistics within 2 hours after the event's conclusion, a consensus of credible reporting may be used instead. All markets will settle based on the official final result as recognized by the governing body or event organizers. Revisions to officially declared final scores made after market resolution will not be accounted for in determining the outcome.",
+    "endDate": "2026-07-19T19:00:00Z",
+    "closed": true,
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"1\", \"0\"]",
+    "clobTokenIds": "[\"92571123127402723974640575698896369187398878096159854165218788690275715186568\", \"8897745942892740554419142821188087932128583924929997823029754125155949675043\"]",
+    "umaResolutionStatus": "resolved",
+    "negRisk": true,
+    "slug": "fifwc-esp-arg-2026-07-19-draw",
+    "resolutionSource": "https://www.fifa.com/fifaplus/en/tournaments/mens/worldcup",
+    "events": [
+      {
+        "id": "708597",
+        "title": "Spain vs. Argentina",
+        "slug": "fifwc-esp-arg-2026-07-19",
+        "category": null
+      }
+    ]
+  }
+]
