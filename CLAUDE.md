@@ -19,6 +19,10 @@ Läs `PLAN.md` först. Bygg **en fas i taget**, i ordning. Gå inte vidare förr
     tidpunkten och spara hur gammalt det är.
   - Filtrera bort kombinationsmarknader (ticker börjar med `KXMVE`).
 - **Polymarket:** priser är flyttal med brus (`0.4900001785`). Avrunda till 4 decimaler.
+- **Polymarket Gamma** (`gamma-api.polymarket.com`) ger frågetext, regler och resultat.
+  Stängda marknader kommer bara med `closed=true`.
+- **Kalshi candlesticks:** använd batch-endpointen `/markets/candlesticks` även för historik.
+  Den historiska endpointen har andra fältnamn.
 - **Avgift:** `round_up(0.07 * C * P * (1 - P))` till hel cent. Test: 100 st à 0.55 → 1.74.
 - Alla tider sparas i **UTC** (unix-sekunder eller ISO med `Z`).
 - Alla HTTP-anrop går via `http.py` (backoff, respektera `Retry-After`, max ~5 anrop/s mot Kalshi).

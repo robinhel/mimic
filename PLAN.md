@@ -98,6 +98,18 @@ Två frågor med nästan samma titel kan avgöras olika. Matchningen måste jäm
 | 38 | Kalshi-priser är text i `*_dollars`-fält, antal i `*_fp`. Polymarket skickar flyttal med brus. | Tolka med `Decimal` i en hjälpfunktion per API. |
 | 39 | Topplistans etta (månad) handlar "Bitcoin upp/ner 5 minuter", alltså en bot. | Uteslut också marknader som stänger inom 1 timme efter signalen. |
 
+### Hittat under bygget (2026-11-10)
+
+| # | Lucka | Lösning |
+|---|---|---|
+| 40 | Polymarkets Data API saknar frågetext och regler. | Hämta dem från Gamma: `gamma-api.polymarket.com/markets?condition_ids=...`. Stängda marknader kommer bara med `closed=true`. |
+| 41 | Kalshis `/historical/markets/{ticker}/candlesticks` har andra fältnamn (`close` i stället för `close_dollars`). | Använd batch-endpointen `/markets/candlesticks?market_tickers=...`. Den fungerar för både live och historik, med samma fält. |
+| 42 | `include_latest_before_start` sätter candlens tid till `start_ts`. Då syns inte hur gammalt priset är. | Hämta ett dygn bakåt och ta senaste candle före tidpunkten. Äldre än ett dygn räknas som saknat pris. |
+| 43 | Lucka 7: orderboken fungerar utan inloggning. | `orderbook_fp` med `yes_dollars` och `no_dollars`, listor med [pris, antal]. |
+| 44 | Kalshis katalog är enorm: 1000 stängda marknader täcker ca 30 minuter. Ca 80 % är serier med timme eller 15 minuter. | Hoppa över de serierna (`/series`, fältet `frequency`). Kalshi ger 429 redan vid ca 5 anrop/s med `limit=1000`, klienten väntar. |
+| 45 | Polymarkets parametrar var okända. | Topplistan: `time_period` (day/week/month/all) och `order_by` (PNL/VOLUME). `/v2/activity` tar `start` och ger nyast först. Stängda positioner har `total_cost_usdc` 0, insatsen är `avg_price * total_size`. |
+| 46 | Insamlingen blev 5 GB, nästan bara bottar. | Hämta inte positioner för plånböcker med avkortad aktivitet, de är redan bottar. |
+
 ---
 
 ## 3. Faser
