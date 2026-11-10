@@ -6,7 +6,8 @@ DAY = 86400
 def trade(wallet, i, condition="c1", outcome_index=0, ts=0, side="BUY"):
     return {
         "proxy_wallet": wallet, "transaction_hash": f"0x{i}", "condition_id": condition,
-        "token_id": f"{condition}-{outcome_index}", "outcome": "Yes", "outcome_index": outcome_index,
+        "token_id": f"{condition}-{outcome_index}", "outcome": "Yes",
+        "outcome_index": outcome_index,
         "side": side, "price": 0.5, "size": 10, "usdc_size": 5, "timestamp": ts,
         "title": "t", "slug": "s", "event_slug": "e",
     }  # fmt: skip
