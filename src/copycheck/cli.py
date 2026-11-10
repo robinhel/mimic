@@ -3,7 +3,17 @@
 import argparse
 import time
 
-from copycheck import backtest, config, db, kalshi, matching, polymarket, ranking, signals
+from copycheck import (
+    backtest,
+    config,
+    db,
+    kalshi,
+    matching,
+    polymarket,
+    ranking,
+    report,
+    signals,
+)
 from copycheck.http import HttpClient
 
 LISTS = [("month", "PNL"), ("month", "VOLUME"), ("all", "PNL"), ("all", "VOLUME")]
@@ -143,6 +153,9 @@ def main(argv=None) -> None:
     b = sub.add_parser("backtest", help="simulera kopiering på testperioden")
     b.add_argument("--db", default=config.DB_PATH)
     b.add_argument("--top", type=int, default=20, help="antal traders att kopiera")
+    rp = sub.add_parser("report", help="skriv rapporten som markdown")
+    rp.add_argument("--db", default=config.DB_PATH)
+    rp.add_argument("--out", help="fil att skriva till, annars skärmen")
     args = p.parse_args(argv)
 
     if args.cmd == "collect":
@@ -166,6 +179,13 @@ def main(argv=None) -> None:
         signals.build(conn, config.MIN_SIGNAL_USD, config.SIGNAL_WINDOW)
         backtest.run(conn, HttpClient(), config.KALSHI_BASE_URL, train_start, test_start, now,
                      backtest.Config(), top=args.top)  # fmt: skip
+    elif args.cmd == "report":
+        text = report.render(db.connect(args.db), int(time.time()))
+        if args.out:
+            with open(args.out, "w") as f:
+                f.write(text)
+        else:
+            print(text)
     elif args.cmd == "search":
         for m in db.search_kalshi(db.connect(args.db), args.text):
             print(f"{m['ticker']:45} {m['status'] or '':10} {m['result'] or '-':4} {m['title']}")

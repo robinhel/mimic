@@ -8,8 +8,8 @@ def setup(trades):
         conn.execute(
             """INSERT INTO signals (id, wallet, condition_id, token_id, outcome_index, avg_price,
                    usdc, first_ts, trigger_ts, last_ts, n_fills)
-               VALUES (?, 'w', ?, 't', 0, 0.5, 300, 0, 0, 0, 1)""",
-            (sid, f"c{sid}"),
+               VALUES (?, 'w', ?, ?, 0, 0.5, 300, 0, 0, 0, 1)""",
+            (sid, f"c{sid}", f"t{sid}"),
         )
         conn.execute(
             """INSERT INTO pm_markets (condition_id, question, result_index, outcomes, category)
