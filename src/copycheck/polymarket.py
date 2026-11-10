@@ -44,3 +44,14 @@ def activity(client, wallet, start, max_pages=None):
 def closed_positions(client, wallet, max_pages=None):
     params = {"user": wallet, "status": "CLOSED", "limit": 500}
     return fetch_all(client, "/positions", params, max_pages)
+
+
+def gamma_markets(client, condition_ids, batch=50):
+    """Frågetext, regler och resultat från Gamma. Stängda kommer bara med closed=true."""
+    out = []
+    for i in range(0, len(condition_ids), batch):
+        ids = list(condition_ids[i : i + batch])
+        for closed in ("false", "true"):
+            params = {"condition_ids": ids, "closed": closed, "limit": len(ids)}
+            out.extend(client.get_json(config.POLYMARKET_GAMMA_URL + "/markets", params) or [])
+    return out

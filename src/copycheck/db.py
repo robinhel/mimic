@@ -1,5 +1,6 @@
 """SQLite-schema och frågor. Alla tider i UTC unix-sekunder."""
 
+import json
 import re
 import sqlite3
 
@@ -86,6 +87,35 @@ CREATE TABLE IF NOT EXISTS signals (
     last_ts INTEGER NOT NULL,
     n_fills INTEGER NOT NULL,
     UNIQUE (wallet, token_id, first_ts)
+);
+CREATE TABLE IF NOT EXISTS pm_markets (
+    condition_id TEXT PRIMARY KEY,
+    question TEXT,
+    description TEXT,
+    end_ts INTEGER,
+    closed INTEGER,
+    result_index INTEGER,           -- vinnande utfall, NULL om inte avgjord
+    outcomes TEXT,                  -- JSON-lista, t.ex. ["Yes", "No"]
+    outcome0_token TEXT,
+    outcome1_token TEXT,
+    category TEXT,
+    slug TEXT
+);
+CREATE TABLE IF NOT EXISTS match_runs (
+    pm_condition TEXT PRIMARY KEY,
+    n_candidates INTEGER NOT NULL,
+    judged_ts INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS matches (
+    pm_condition TEXT NOT NULL,
+    kalshi_ticker TEXT NOT NULL,
+    level TEXT NOT NULL,            -- exact, near, related, none
+    outcome0_side TEXT,             -- vilken Kalshi-sida som är PM:s utfall 0 (yes/no)
+    reason TEXT,
+    model TEXT,
+    judged_ts INTEGER NOT NULL,
+    review_ok INTEGER,              -- granskad för hand: 1 rätt, 0 fel, NULL ej granskad
+    PRIMARY KEY (pm_condition, kalshi_ticker)
 );
 -- Externt innehåll: indexet byggs om med rebuild_kalshi_search efter hämtningen.
 CREATE VIRTUAL TABLE IF NOT EXISTS kalshi_search USING fts5 (
@@ -232,15 +262,53 @@ def fts_query(text):
     return " OR ".join(f'"{w}"' for w in words)
 
 
-def search_kalshi(conn, text, limit=20):
+def search_kalshi(conn, text, limit=20, min_close=None, max_close=None):
     q = fts_query(text)
     if not q:
         return []
     cur = conn.execute(
-        """SELECT m.ticker, m.title, m.yes_sub_title, m.close_ts, m.status, m.result
+        """SELECT m.ticker, m.title, m.yes_sub_title, m.rules_primary, m.close_ts, m.status,
+                  m.result
            FROM kalshi_search s JOIN kalshi_markets m ON m.id = s.rowid
-           WHERE kalshi_search MATCH ? ORDER BY bm25(kalshi_search) LIMIT ?""",
-        (q, limit),
+           WHERE kalshi_search MATCH ? AND m.close_ts BETWEEN ? AND ?
+           ORDER BY bm25(kalshi_search) LIMIT ?""",
+        (q, min_close or 0, max_close or 2**62, limit),
     )
     cols = [c[0] for c in cur.description]
     return [dict(zip(cols, r, strict=True)) for r in cur]
+
+
+def upsert_pm_markets(conn, gamma_rows):
+    def row(m):
+        outcomes = json.loads(m.get("outcomes") or "[]")
+        tokens = json.loads(m.get("clobTokenIds") or "[]") + [None, None]
+        prices = [float(x) for x in json.loads(m.get("outcomePrices") or "[]")]
+        result = prices.index(1.0) if m.get("closed") and 1.0 in prices else None
+        category = next((e.get("category") for e in m.get("events") or []), None)
+        return (
+            m["conditionId"], m.get("question"), m.get("description"),
+            kalshi.iso_ts(m.get("endDate")), int(bool(m.get("closed"))), result,
+            json.dumps(outcomes), tokens[0], tokens[1], category, m.get("slug"),
+        )  # fmt: skip
+
+    conn.executemany(
+        """INSERT OR REPLACE INTO pm_markets
+           (condition_id, question, description, end_ts, closed, result_index, outcomes,
+            outcome0_token, outcome1_token, category, slug)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        [row(m) for m in gamma_rows],
+    )
+    conn.commit()
+
+
+def pm_market(conn, condition_id):
+    cur = conn.execute(
+        """SELECT condition_id, question, description, outcomes, end_ts
+           FROM pm_markets WHERE condition_id = ?""",
+        (condition_id,),
+    )
+    r = cur.fetchone()
+    if not r:
+        return None
+    return {"condition_id": r[0], "question": r[1], "description": r[2],
+            "outcomes": json.loads(r[3]), "end_ts": r[4]}  # fmt: skip
