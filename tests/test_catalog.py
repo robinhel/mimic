@@ -15,6 +15,7 @@ def test_marknader_sparas_utan_dubbletter_och_gar_att_soka():
     rows = markets()
     for _ in range(2):
         db.upsert_kalshi_markets(conn, rows, source="live", categories={})
+    db.rebuild_kalshi_search(conn)
     assert conn.execute("SELECT COUNT(*) FROM kalshi_markets").fetchone()[0] == len(rows)
     word = rows[0]["title"].split()[0].strip(":")
     hits = db.search_kalshi(conn, word)
@@ -34,4 +35,35 @@ def test_marknad_sparar_serie_kategori_och_tider():
 def test_sok_klarar_specialtecken():
     conn = db.connect(":memory:")
     db.upsert_kalshi_markets(conn, markets(), source="live", categories={})
+    db.rebuild_kalshi_search(conn)
     assert isinstance(db.search_kalshi(conn, 'Jr.: 5+ "threes" -x'), list)
+
+
+class RoutingClient:
+    def __init__(self):
+        self.calls = []
+
+    def get_json(self, url, params=None):
+        self.calls.append((url, dict(params or {})))
+        if url.endswith("/series"):
+            return json.loads((FIXTURES / "kalshi_series.json").read_text())
+        rows = markets()
+        hourly = {**rows[0], "ticker": "KXGOLDH-1-T1", "event_ticker": "KXGOLDH-1"}
+        if "/historical/" in url:
+            return {"markets": [rows[0], hourly], "cursor": ""}
+        return {"markets": rows, "cursor": ""}
+
+
+def test_catalog_hamtar_historik_och_live_utan_timserier():
+    from copycheck import cli
+
+    conn = db.connect(":memory:")
+    client = RoutingClient()
+    cli.catalog(client, conn, "https://k/v2", days=150, now=1794311314, log=lambda *a: None)
+    tickers = {t for (t,) in conn.execute("SELECT ticker FROM kalshi_markets")}
+    assert tickers == {m["ticker"] for m in markets()}
+    assert "KXGOLDH-1-T1" not in tickers
+    assert {p["min_close_ts"] for u, p in client.calls if "markets" in u} == {
+        1794311314 - 150 * 86400
+    }
+    assert db.search_kalshi(conn, "threes")
