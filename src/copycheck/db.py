@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS kalshi_markets (
     source TEXT NOT NULL            -- live eller historical
 );
 CREATE INDEX IF NOT EXISTS kalshi_markets_close ON kalshi_markets (close_ts);
+CREATE TABLE IF NOT EXISTS signals (
+    id INTEGER PRIMARY KEY,
+    wallet TEXT NOT NULL,
+    condition_id TEXT NOT NULL,
+    token_id TEXT NOT NULL,
+    outcome_index INTEGER,
+    avg_price REAL NOT NULL,        -- snittpris viktat med antal kontrakt
+    usdc REAL NOT NULL,
+    first_ts INTEGER NOT NULL,
+    trigger_ts INTEGER NOT NULL,    -- när summan passerade minsta signal: då kopierar vi
+    last_ts INTEGER NOT NULL,
+    n_fills INTEGER NOT NULL,
+    UNIQUE (wallet, token_id, first_ts)
+);
 -- Externt innehåll: indexet byggs om med rebuild_kalshi_search efter hämtningen.
 CREATE VIRTUAL TABLE IF NOT EXISTS kalshi_search USING fts5 (
     title, yes_sub_title, rules_primary, content = 'kalshi_markets', content_rowid = 'id'
