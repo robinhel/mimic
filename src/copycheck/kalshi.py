@@ -53,3 +53,13 @@ def markets(client, base, historical, min_close_ts):
         if not body.get("cursor"):
             return
         params["cursor"] = body["cursor"]
+
+
+def ask_for(side, yes_bid, yes_ask):
+    """Vad det kostar att köpa `side`. NO köps mot YES-buden: no_ask = 1 - yes_bid."""
+    return yes_ask if side == "yes" else yes_ask_from_no_bid(yes_bid)
+
+
+def bid_for(side, yes_bid, yes_ask):
+    """Vad vi får när vi säljer `side`. no_bid = 1 - yes_ask."""
+    return yes_bid if side == "yes" else Decimal(1) - yes_ask
