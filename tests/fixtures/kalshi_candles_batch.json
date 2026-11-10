@@ -1,0 +1,129 @@
+{
+  "markets": [
+    {
+      "candlesticks": [
+        {
+          "end_period_ts": 1788984840,
+          "open_interest_fp": "5247.55",
+          "price": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "mean_dollars": "0.0100",
+            "open_dollars": "0.0100",
+            "previous_dollars": "0.0100"
+          },
+          "volume_fp": "92.58",
+          "yes_ask": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "open_dollars": "0.0100"
+          },
+          "yes_bid": {
+            "close_dollars": "0.0000",
+            "high_dollars": "0.0000",
+            "low_dollars": "0.0000",
+            "open_dollars": "0.0000"
+          }
+        },
+        {
+          "end_period_ts": 1788986880,
+          "open_interest_fp": "5247.55",
+          "price": {
+            "previous_dollars": "0.0100"
+          },
+          "volume_fp": "0.00",
+          "yes_ask": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "open_dollars": "0.0100"
+          },
+          "yes_bid": {
+            "close_dollars": "0.0000",
+            "high_dollars": "0.0000",
+            "low_dollars": "0.0000",
+            "open_dollars": "0.0000"
+          }
+        },
+        {
+          "end_period_ts": 1788988920,
+          "open_interest_fp": "5256.90",
+          "price": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "mean_dollars": "0.0100",
+            "open_dollars": "0.0100",
+            "previous_dollars": "0.0100"
+          },
+          "volume_fp": "9.35",
+          "yes_ask": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "open_dollars": "0.0100"
+          },
+          "yes_bid": {
+            "close_dollars": "0.0000",
+            "high_dollars": "0.0000",
+            "low_dollars": "0.0000",
+            "open_dollars": "0.0000"
+          }
+        },
+        {
+          "end_period_ts": 1788994560,
+          "open_interest_fp": "5266.25",
+          "price": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "mean_dollars": "0.0100",
+            "open_dollars": "0.0100",
+            "previous_dollars": "0.0100"
+          },
+          "volume_fp": "9.35",
+          "yes_ask": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "open_dollars": "0.0100"
+          },
+          "yes_bid": {
+            "close_dollars": "0.0000",
+            "high_dollars": "0.0000",
+            "low_dollars": "0.0000",
+            "open_dollars": "0.0000"
+          }
+        },
+        {
+          "end_period_ts": 1788994680,
+          "open_interest_fp": "5266.25",
+          "price": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "mean_dollars": "0.0100",
+            "open_dollars": "0.0100",
+            "previous_dollars": "0.0100"
+          },
+          "volume_fp": "1.01",
+          "yes_ask": {
+            "close_dollars": "0.0100",
+            "high_dollars": "0.0100",
+            "low_dollars": "0.0100",
+            "open_dollars": "0.0100"
+          },
+          "yes_bid": {
+            "close_dollars": "0.0000",
+            "high_dollars": "0.0000",
+            "low_dollars": "0.0000",
+            "open_dollars": "0.0000"
+          }
+        }
+      ],
+      "market_ticker": "KXRAIN-26SEP09-TTN"
+    }
+  ]
+}
