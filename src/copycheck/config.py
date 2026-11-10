@@ -27,3 +27,5 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 DB_PATH = os.environ.get("COPYCHECK_DB", "copycheck.db")
 TRAIN_DAYS = 90
 TEST_DAYS = 60
+MIN_SIGNAL_USD = 250
+SIGNAL_WINDOW = 10 * 60
