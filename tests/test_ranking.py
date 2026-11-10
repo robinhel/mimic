@@ -73,3 +73,10 @@ def test_avkortad_aktivitet_ar_bot():
     setup(conn, "big", [trade("big", 1, ts=0)])
     conn.execute("UPDATE traders SET activity_truncated = 1")
     assert "avkortad" in flags(conn)["big"]
+
+
+def test_avkortade_positioner_ar_bot():
+    conn = db.connect(":memory:")
+    setup(conn, "many", [trade("many", 1, ts=0)])
+    conn.execute("UPDATE traders SET positions_truncated = 1")
+    assert "positioner" in flags(conn)["many"]

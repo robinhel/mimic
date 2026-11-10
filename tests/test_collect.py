@@ -51,3 +51,16 @@ def test_collect_hamtar_bara_nya_affarer_andra_gangen():
     wallet = load("pm_activity")["data"][0]["proxy_wallet"]
     assert starts[wallet] == max(r["timestamp"] for r in load("pm_activity")["data"])
     assert min(starts.values()) == 1794311314 - 150 * 86400
+
+
+def test_hoppar_over_positioner_nar_aktiviteten_ar_avkortad():
+    conn = db.connect(":memory:")
+    client = RoutingClient()
+    act = load("pm_activity")
+    act["pagination"]["next_cursor"] = "mer"
+    client.get_json = lambda url, params=None, orig=client.get_json: (
+        act if url.endswith("/activity") else orig(url, params)
+    )
+    cli.collect(client, conn, per_list=5, days=150, now=1794311314, log=lambda *a: None, max_pages=1)
+    assert conn.execute("SELECT COUNT(*) FROM pm_positions").fetchone()[0] == 0
+    assert conn.execute("SELECT MIN(is_bot) FROM traders").fetchone()[0] == 1
