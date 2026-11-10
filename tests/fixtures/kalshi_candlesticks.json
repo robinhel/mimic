@@ -1,0 +1,29 @@
+{
+  "candlesticks": [
+    {
+      "end_period_ts": 1794308400,
+      "open_interest_fp": "575.00",
+      "price": {
+        "close_dollars": "0.0900",
+        "high_dollars": "0.2400",
+        "low_dollars": "0.0500",
+        "mean_dollars": "0.1369",
+        "open_dollars": "0.2300"
+      },
+      "volume_fp": "897.00",
+      "yes_ask": {
+        "close_dollars": "0.1000",
+        "high_dollars": "0.9900",
+        "low_dollars": "0.1000",
+        "open_dollars": "0.9900"
+      },
+      "yes_bid": {
+        "close_dollars": "0.0900",
+        "high_dollars": "0.2400",
+        "low_dollars": "0.0000",
+        "open_dollars": "0.0000"
+      }
+    }
+  ],
+  "ticker": "KXRAIN-26NOV11-SGF"
+}

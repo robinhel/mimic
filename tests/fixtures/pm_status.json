@@ -1,0 +1,65 @@
+{
+  "data": {
+    "computed_at": "2026-11-10T11:18:58Z",
+    "age_seconds": 2,
+    "serving": {
+      "lag_seconds": 1,
+      "worst": "custody_balances",
+      "mechanisms": [
+        {
+          "name": "activity_feed",
+          "age_seconds": 0
+        },
+        {
+          "name": "custody_balances",
+          "age_seconds": 1,
+          "blocks_behind": 1
+        },
+        {
+          "name": "pnl",
+          "age_seconds": 1,
+          "blocks_behind": 2
+        }
+      ]
+    },
+    "ingestion": {
+      "cursors": 201,
+      "network": "polygon",
+      "chain_id": 137,
+      "max_synced_block": 97069388,
+      "min_synced_block": 97069387,
+      "most_lagged": {
+        "source": "auto_redeem_binary_redemption",
+        "block": 97069387,
+        "behind_max": 1
+      },
+      "lagging": [
+        {
+          "source": "auto_redeem_binary_redemption",
+          "block": 97069387,
+          "behind_max": 1
+        },
+        {
+          "source": "auto_redeem_neg_risk_redemption",
+          "block": 97069387,
+          "behind_max": 1
+        },
+        {
+          "source": "auto_redeem_v2_binary_redemption",
+          "block": 97069387,
+          "behind_max": 1
+        },
+        {
+          "source": "auto_redeem_v2_neg_risk_redemption",
+          "block": 97069387,
+          "behind_max": 1
+        },
+        {
+          "source": "auto_redeem_v3_binary_redemption",
+          "block": 97069387,
+          "behind_max": 1
+        }
+      ]
+    }
+  }
+}
