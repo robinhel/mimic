@@ -1,9 +1,9 @@
-"""Kommandon: collect (fas 1), catalog och search (fas 2), match och review (fas 3)."""
+"""Kommandon: collect, catalog, search, match, review, backtest och report."""
 
 import argparse
 import time
 
-from copycheck import config, db, kalshi, matching, polymarket, ranking, signals
+from copycheck import backtest, config, db, kalshi, matching, polymarket, ranking, signals
 from copycheck.http import HttpClient
 
 LISTS = [("month", "PNL"), ("month", "VOLUME"), ("all", "PNL"), ("all", "VOLUME")]
@@ -140,6 +140,9 @@ def main(argv=None) -> None:
     r = sub.add_parser("review", help="granska matchningar för hand")
     r.add_argument("--db", default=config.DB_PATH)
     r.add_argument("--level", default="exact")
+    b = sub.add_parser("backtest", help="simulera kopiering på testperioden")
+    b.add_argument("--db", default=config.DB_PATH)
+    b.add_argument("--top", type=int, default=20, help="antal traders att kopiera")
     args = p.parse_args(argv)
 
     if args.cmd == "collect":
@@ -155,6 +158,14 @@ def main(argv=None) -> None:
         match(conn, HttpClient(), matching.groq_llm(args.model), args.model)
     elif args.cmd == "review":
         review(db.connect(args.db), level=args.level)
+    elif args.cmd == "backtest":
+        conn = db.connect(args.db)
+        now = int(time.time())
+        test_start = now - config.TEST_DAYS * 86400
+        train_start = test_start - config.TRAIN_DAYS * 86400
+        signals.build(conn, config.MIN_SIGNAL_USD, config.SIGNAL_WINDOW)
+        backtest.run(conn, HttpClient(), config.KALSHI_BASE_URL, train_start, test_start, now,
+                     backtest.Config(), top=args.top)  # fmt: skip
     elif args.cmd == "search":
         for m in db.search_kalshi(db.connect(args.db), args.text):
             print(f"{m['ticker']:45} {m['status'] or '':10} {m['result'] or '-':4} {m['title']}")

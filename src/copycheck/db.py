@@ -101,6 +101,27 @@ CREATE TABLE IF NOT EXISTS pm_markets (
     category TEXT,
     slug TEXT
 );
+CREATE TABLE IF NOT EXISTS sim_trades (
+    signal_id INTEGER NOT NULL,
+    strategy TEXT NOT NULL,
+    delay INTEGER NOT NULL,
+    kalshi_ticker TEXT,
+    side TEXT,
+    entry_ts INTEGER,
+    entry_price REAL,
+    quote_age INTEGER,              -- sekunder sedan senaste candle (lucka 36)
+    stale INTEGER,
+    contracts INTEGER,
+    fee_in REAL,
+    exit_kind TEXT,                 -- settled, sold eller open
+    exit_price REAL,
+    fee_out REAL,
+    pnl REAL,
+    cost REAL,
+    mismatch INTEGER,               -- PM och Kalshi avgjordes olika (lucka 28)
+    skip_reason TEXT,               -- no_match, short_market, no_price, price_ran, ...
+    PRIMARY KEY (signal_id, strategy, delay)
+);
 CREATE TABLE IF NOT EXISTS match_runs (
     pm_condition TEXT PRIMARY KEY,
     n_candidates INTEGER NOT NULL,

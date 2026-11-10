@@ -4,6 +4,8 @@ from bisect import bisect_right
 from dataclasses import dataclass
 from decimal import Decimal
 
+import requests
+
 from copycheck import kalshi
 from copycheck.fees import fee
 from copycheck.matching import kalshi_side
@@ -100,3 +102,98 @@ def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
         "pnl": contracts * (exit_price - price) - fee_in - fee_out,
         "cost": contracts * price + fee_in, "mismatch": mismatch, "skip_reason": None,
     }  # fmt: skip
+
+
+TEST_SIGNALS = """
+SELECT s.id, s.wallet, s.token_id, s.trigger_ts, s.avg_price, s.outcome_index,
+       p.end_ts, p.result_index, p.category, mm.kalshi_ticker, m.outcome0_side, k.result,
+       k.close_ts
+FROM signals s
+LEFT JOIN pm_markets p ON p.condition_id = s.condition_id
+LEFT JOIN (SELECT pm_condition, MIN(kalshi_ticker) AS kalshi_ticker FROM matches
+           WHERE level = 'exact' AND COALESCE(review_ok, 1) = 1
+           GROUP BY pm_condition) mm ON mm.pm_condition = s.condition_id
+LEFT JOIN matches m ON m.pm_condition = mm.pm_condition AND m.kalshi_ticker = mm.kalshi_ticker
+LEFT JOIN kalshi_markets k ON k.ticker = mm.kalshi_ticker
+WHERE s.wallet IN ({wallets}) AND s.trigger_ts >= ? AND s.trigger_ts < ?
+ORDER BY s.id
+"""
+COLUMNS = ["signal_id", "strategy", "delay", "kalshi_ticker", "side", "entry_ts", "entry_price",
+           "quote_age", "stale", "contracts", "fee_in", "exit_kind", "exit_price", "fee_out",
+           "pnl", "cost", "mismatch", "skip_reason"]  # fmt: skip
+CANDLE_LOOKBACK = 86400  # pris äldre än ett dygn räknas som saknat
+
+
+def fetch_candles(client, base, ticker, start, end):
+    body = client.get_json(
+        f"{base}/markets/candlesticks",
+        {"market_tickers": ticker, "start_ts": start, "end_ts": end, "period_interval": 1},
+    )
+    return next(iter(body.get("markets") or []), {}).get("candlesticks") or []
+
+
+def open_bid(client, base, ticker, side):
+    try:
+        m = client.get_json(f"{base}/markets/{ticker}").get("market") or {}
+    except requests.HTTPError:
+        return None
+    yes_bid, yes_ask = (
+        kalshi.dollars(m.get("yes_bid_dollars")),
+        kalshi.dollars(m.get("yes_ask_dollars")),
+    )
+    if yes_bid is None or yes_ask is None:
+        return None
+    return kalshi.bid_for(side, yes_bid, yes_ask)
+
+
+def first_sell(conn, wallet, token, after, before):
+    return conn.execute(
+        """SELECT MIN(trade_ts) FROM pm_activity
+           WHERE wallet = ? AND token_id = ? AND side = 'SELL' AND trade_ts > ? AND trade_ts < ?""",
+        (wallet, token, after, before or 2**62),
+    ).fetchone()[0]
+
+
+def _db_row(r):
+    return tuple(float(r[c]) if isinstance(r.get(c), Decimal) else r.get(c) for c in COLUMNS)
+
+
+def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=print):
+    traders = select_traders(conn, train_start, train_end, top=top)
+    log(f"{len(traders)} traders valda på träningsperioden")
+    wallets = [t[0] for t in traders]
+    sql = TEST_SIGNALS.format(wallets=",".join("?" * len(wallets)) or "NULL")
+    rows = conn.execute(sql, (*wallets, train_end, test_end)).fetchall()
+    log(f"{len(rows)} signaler i testperioden")
+    conn.execute("DELETE FROM sim_trades")
+    out = []
+    for i, r in enumerate(rows, 1):
+        sid, wallet, token, trigger, avg, idx, pm_end, pm_res, cat, ticker, side0, k_res, close = r
+        s = {"signal_id": sid, "wallet": wallet, "trigger_ts": trigger, "avg_price": avg,
+             "outcome_index": idx, "pm_end_ts": pm_end, "pm_result_index": pm_res,
+             "kalshi_ticker": ticker, "outcome0_side": side0, "kalshi_result": k_res,
+             "category": cat}  # fmt: skip
+        if ticker is None or side0 is None:
+            out += [_skip(s, st, d, "no_match") for st in STRATEGIES for d in DELAYS]
+            continue
+        candles = fetch_candles(client, base, ticker, trigger - CANDLE_LOOKBACK,
+                                trigger + max(DELAYS) + 60)  # fmt: skip
+        sell = first_sell(conn, wallet, token, trigger, close)
+        if sell:
+            later = fetch_candles(client, base, ticker, sell - CANDLE_LOOKBACK,
+                                  sell + max(DELAYS) + 60)  # fmt: skip
+            candles = sorted({c["end_period_ts"]: c for c in candles + later}.values(),
+                             key=lambda c: c["end_period_ts"])  # fmt: skip
+        side = kalshi_side(idx, side0)
+        bid = open_bid(client, base, ticker, side) if k_res not in ("yes", "no") else None
+        for st in STRATEGIES:
+            for d in DELAYS:
+                out.append(simulate(s, candles, [sell] if sell else [], d, st, cfg, bid))
+        if i % 50 == 0:
+            log(f"{i}/{len(rows)} signaler simulerade")
+    conn.executemany(
+        f"INSERT INTO sim_trades ({', '.join(COLUMNS)}) VALUES ({', '.join('?' * len(COLUMNS))})",
+        [_db_row(r) for r in out],
+    )
+    conn.commit()
+    log(f"klart: {len(out)} rader i sim_trades")
