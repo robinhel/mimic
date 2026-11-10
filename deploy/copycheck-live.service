@@ -1,0 +1,22 @@
+# Livetest (fas 6) som systemd-tjänst på VM:en. Bara läsning, ingen handel.
+# Installera:
+#   sudo cp deploy/copycheck-live.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now copycheck-live
+# Följ loggen: journalctl -u copycheck-live -f
+[Unit]
+Description=copycheck livetest (pappershandel)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=copycheck
+WorkingDirectory=/opt/copycheck
+ExecStart=/opt/copycheck/.venv/bin/copycheck live
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

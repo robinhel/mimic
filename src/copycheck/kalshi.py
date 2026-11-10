@@ -63,3 +63,12 @@ def ask_for(side, yes_bid, yes_ask):
 def bid_for(side, yes_bid, yes_ask):
     """Vad vi får när vi säljer `side`. no_bid = 1 - yes_ask."""
     return yes_bid if side == "yes" else Decimal(1) - yes_ask
+
+
+def orderbook_yes_bid(book):
+    bids = (book.get("orderbook_fp") or {}).get("yes_dollars") or []
+    return max((Decimal(p) for p, _ in bids), default=None)
+
+
+def orderbook(client, base, ticker):
+    return client.get_json(f"{base}/markets/{ticker}/orderbook")

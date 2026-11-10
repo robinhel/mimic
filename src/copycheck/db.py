@@ -122,6 +122,29 @@ CREATE TABLE IF NOT EXISTS sim_trades (
     skip_reason TEXT,               -- no_match, short_market, no_price, price_ran, ...
     PRIMARY KEY (signal_id, strategy, delay)
 );
+CREATE TABLE IF NOT EXISTS kalshi_quotes (
+    ticker TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    yes_bid REAL,
+    yes_ask REAL,
+    source TEXT NOT NULL,           -- candle eller orderbook
+    PRIMARY KEY (ticker, ts, source)
+);
+CREATE TABLE IF NOT EXISTS live_seen (
+    wallet TEXT NOT NULL,
+    tx_hash TEXT NOT NULL,
+    token_id TEXT NOT NULL,
+    trade_ts INTEGER NOT NULL,
+    seen_ts INTEGER NOT NULL,
+    late INTEGER NOT NULL,          -- upptäckt för sent (lucka 32), räknas separat
+    kalshi_ticker TEXT NOT NULL,
+    PRIMARY KEY (wallet, tx_hash, token_id)
+);
+CREATE TABLE IF NOT EXISTS heartbeats (
+    ts INTEGER NOT NULL,
+    component TEXT NOT NULL,
+    status TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS match_runs (
     pm_condition TEXT PRIMARY KEY,
     n_candidates INTEGER NOT NULL,

@@ -1,6 +1,7 @@
-"""Kommandon: collect, catalog, search, match, review, backtest och report."""
+"""Kommandon: collect, catalog, search, match, review, backtest, report och live."""
 
 import argparse
+import logging
 import time
 
 from copycheck import (
@@ -8,6 +9,7 @@ from copycheck import (
     config,
     db,
     kalshi,
+    live,
     matching,
     polymarket,
     ranking,
@@ -156,6 +158,11 @@ def main(argv=None) -> None:
     rp = sub.add_parser("report", help="skriv rapporten som markdown")
     rp.add_argument("--db", default=config.DB_PATH)
     rp.add_argument("--out", help="fil att skriva till, annars skärmen")
+    lv = sub.add_parser("live", help="livetest: följ valda traders var 30:e sekund")
+    lv.add_argument("--db", default=config.DB_PATH)
+    lv.add_argument("--top", type=int, default=20)
+    lv.add_argument("--wallets", nargs="*", help="plånböcker, annars de bästa på 90 dagar")
+    lv.add_argument("--backup", default="backups/copycheck-latest.db")
     args = p.parse_args(argv)
 
     if args.cmd == "collect":
@@ -186,6 +193,17 @@ def main(argv=None) -> None:
                 f.write(text)
         else:
             print(text)
+    elif args.cmd == "live":
+        logging.basicConfig(level=logging.INFO)
+        conn = db.connect(args.db)
+        now = int(time.time())
+        wallets = args.wallets or [
+            w for w, *_ in backtest.select_traders(
+                conn, now - config.TRAIN_DAYS * 86400, now, top=args.top
+            )
+        ]  # fmt: skip
+        print(f"följer {len(wallets)} traders")
+        live.loop(conn, HttpClient(), config.KALSHI_BASE_URL, wallets, args.backup)
     elif args.cmd == "search":
         for m in db.search_kalshi(db.connect(args.db), args.text):
             print(f"{m['ticker']:45} {m['status'] or '':10} {m['result'] or '-':4} {m['title']}")
