@@ -1,7 +1,9 @@
 """SQLite-schema och frågor. Alla tider i UTC unix-sekunder."""
 
+import re
 import sqlite3
 
+from copycheck import kalshi
 from copycheck.polymarket import price
 
 SCHEMA = """
@@ -52,6 +54,28 @@ CREATE TABLE IF NOT EXISTS pm_positions (
     title TEXT,
     slug TEXT,
     PRIMARY KEY (wallet, token_id)
+);
+CREATE TABLE IF NOT EXISTS kalshi_markets (
+    id INTEGER PRIMARY KEY,
+    ticker TEXT NOT NULL UNIQUE,
+    event_ticker TEXT NOT NULL,
+    series_ticker TEXT NOT NULL,
+    category TEXT,
+    title TEXT,
+    yes_sub_title TEXT,
+    rules_primary TEXT,
+    rules_secondary TEXT,
+    market_type TEXT,
+    open_ts INTEGER,
+    close_ts INTEGER,
+    status TEXT,
+    result TEXT,
+    source TEXT NOT NULL            -- live eller historical
+);
+CREATE INDEX IF NOT EXISTS kalshi_markets_close ON kalshi_markets (close_ts);
+-- Externt innehåll: indexet byggs om med rebuild_kalshi_search efter hämtningen.
+CREATE VIRTUAL TABLE IF NOT EXISTS kalshi_search USING fts5 (
+    title, yes_sub_title, rules_primary, content = 'kalshi_markets', content_rowid = 'id'
 );
 """
 
@@ -147,3 +171,62 @@ def activity_truncated(conn, wallet):
         "SELECT activity_truncated FROM traders WHERE wallet = ?", (wallet,)
     ).fetchone()
     return bool(row and row[0])
+
+
+def upsert_kalshi_markets(conn, rows, source, categories):
+    conn.executemany(
+        """INSERT INTO kalshi_markets
+           (ticker, event_ticker, series_ticker, category, title, yes_sub_title, rules_primary,
+            rules_secondary, market_type, open_ts, close_ts, status, result, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (ticker) DO UPDATE SET
+             category = excluded.category, title = excluded.title,
+             yes_sub_title = excluded.yes_sub_title, rules_primary = excluded.rules_primary,
+             rules_secondary = excluded.rules_secondary, close_ts = excluded.close_ts,
+             status = excluded.status, result = excluded.result, source = excluded.source""",
+        [
+            (
+                m["ticker"],
+                m["event_ticker"],
+                kalshi.series_of(m["event_ticker"]),
+                categories.get(kalshi.series_of(m["event_ticker"])),
+                m.get("title"),
+                m.get("yes_sub_title"),
+                m.get("rules_primary"),
+                m.get("rules_secondary"),
+                m.get("market_type"),
+                kalshi.iso_ts(m.get("open_time")),
+                kalshi.iso_ts(m.get("close_time")),
+                m.get("status"),
+                m.get("result"),
+                source,
+            )  # fmt: skip
+            for m in rows
+        ],
+    )
+    conn.commit()
+
+
+def rebuild_kalshi_search(conn):
+    conn.execute("INSERT INTO kalshi_search (kalshi_search) VALUES ('rebuild')")
+    conn.commit()
+
+
+def fts_query(text):
+    """Gör fri text till en FTS5-fråga: orden med OR, inga specialtecken."""
+    words = [w for w in re.findall(r"\w+", text) if len(w) > 1]
+    return " OR ".join(f'"{w}"' for w in words)
+
+
+def search_kalshi(conn, text, limit=20):
+    q = fts_query(text)
+    if not q:
+        return []
+    cur = conn.execute(
+        """SELECT m.ticker, m.title, m.yes_sub_title, m.close_ts, m.status, m.result
+           FROM kalshi_search s JOIN kalshi_markets m ON m.id = s.rowid
+           WHERE kalshi_search MATCH ? ORDER BY bm25(kalshi_search) LIMIT ?""",
+        (q, limit),
+    )
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, r, strict=True)) for r in cur]

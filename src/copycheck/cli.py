@@ -1,9 +1,9 @@
-"""Kommandon: copycheck collect (fas 1). Fler kommer i senare faser."""
+"""Kommandon: collect (fas 1), catalog och search (fas 2)."""
 
 import argparse
 import time
 
-from copycheck import config, db, polymarket, ranking
+from copycheck import config, db, kalshi, polymarket, ranking
 from copycheck.http import HttpClient
 
 LISTS = [("month", "PNL"), ("month", "VOLUME"), ("all", "PNL"), ("all", "VOLUME")]
@@ -45,6 +45,27 @@ def collect(client, conn, per_list, days, now, log=print, max_pages=20):
     log(f"klart: {total} traders, {bots} flaggade som bottar")
 
 
+def catalog(client, conn, base, days, now, log=print):
+    """Hämtar Kalshi-marknader som stänger efter periodens start, historik och live."""
+    series = kalshi.series(client, base)
+    categories = {x["ticker"]: x.get("category") for x in series}
+    skip = kalshi.skipped_series(series)
+    since = now - days * 86400
+    for historical in (True, False):
+        kept = pages = 0
+        for page in kalshi.markets(client, base, historical, since):
+            rows = [m for m in page if kalshi.series_of(m["event_ticker"]) not in skip]
+            db.upsert_kalshi_markets(conn, rows, "historical" if historical else "live", categories)
+            kept += len(rows)
+            pages += 1
+            if pages % 50 == 0:
+                log(f"{'historik' if historical else 'live'}: {pages} sidor, {kept} sparade")
+        log(f"{'historik' if historical else 'live'} klar: {pages} sidor, {kept} sparade")
+    db.rebuild_kalshi_search(conn)
+    total = conn.execute("SELECT COUNT(*) FROM kalshi_markets").fetchone()[0]
+    log(f"klart: {total} Kalshi-marknader, sökindex byggt")
+
+
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="copycheck")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -52,8 +73,20 @@ def main(argv=None) -> None:
     c.add_argument("--per-list", type=int, default=150, help="traders per topplista (4 listor)")
     c.add_argument("--days", type=int, default=config.TRAIN_DAYS + config.TEST_DAYS)
     c.add_argument("--db", default=config.DB_PATH)
+    k = sub.add_parser("catalog", help="hämta Kalshi-marknader till databasen")
+    k.add_argument("--days", type=int, default=config.TRAIN_DAYS + config.TEST_DAYS)
+    k.add_argument("--db", default=config.DB_PATH)
+    s = sub.add_parser("search", help="sök bland Kalshi-marknaderna")
+    s.add_argument("text")
+    s.add_argument("--db", default=config.DB_PATH)
     args = p.parse_args(argv)
 
     if args.cmd == "collect":
         conn = db.connect(args.db)
         collect(HttpClient(), conn, args.per_list, args.days, int(time.time()))
+    elif args.cmd == "catalog":
+        conn = db.connect(args.db)
+        catalog(HttpClient(), conn, config.KALSHI_BASE_URL, args.days, int(time.time()))
+    elif args.cmd == "search":
+        for m in db.search_kalshi(db.connect(args.db), args.text):
+            print(f"{m['ticker']:45} {m['status'] or '':10} {m['result'] or '-':4} {m['title']}")
