@@ -66,7 +66,12 @@ def catalog(client, conn, base, days, now, log=print):
     for historical in (True, False):
         kept = pages = 0
         for page in kalshi.markets(client, base, historical, since):
-            rows = [m for m in page if kalshi.series_of(m["event_ticker"]) not in skip]
+            # /historical/markets ignorerar min_close_ts (lucka 47), så vi filtrerar här.
+            rows = [
+                m for m in page
+                if kalshi.series_of(m["event_ticker"]) not in skip
+                and (kalshi.iso_ts(m.get("close_time")) or since) >= since
+            ]  # fmt: skip
             db.upsert_kalshi_markets(conn, rows, "historical" if historical else "live", categories)
             kept += len(rows)
             pages += 1

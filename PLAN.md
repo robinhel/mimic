@@ -109,6 +109,7 @@ Två frågor med nästan samma titel kan avgöras olika. Matchningen måste jäm
 | 44 | Kalshis katalog är enorm: 1000 stängda marknader täcker ca 30 minuter. Ca 80 % är serier med timme eller 15 minuter. | Hoppa över de serierna (`/series`, fältet `frequency`). Kalshi ger 429 redan vid ca 5 anrop/s med `limit=1000`, klienten väntar. |
 | 45 | Polymarkets parametrar var okända. | Topplistan: `time_period` (day/week/month/all) och `order_by` (PNL/VOLUME). `/v2/activity` tar `start` och ger nyast först. Stängda positioner har `total_cost_usdc` 0, insatsen är `avg_price * total_size`. |
 | 46 | Insamlingen blev 5 GB, nästan bara bottar. | Hämta inte positioner för plånböcker med avkortad aktivitet, de är redan bottar. |
+| 47 | `/historical/markets` ignorerar `min_close_ts` och gav marknader ända från 2021. Katalogen blev 4,3 miljoner rader och 10 GB. | `catalog` slänger marknader som stängde före fönstret. |
 
 ---
 

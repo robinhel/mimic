@@ -67,3 +67,21 @@ def test_catalog_hamtar_historik_och_live_utan_timserier():
         1794311314 - 150 * 86400
     }
     assert db.search_kalshi(conn, "threes")
+
+
+def test_catalog_slanger_gamla_marknader_fran_historiken():
+    """/historical/markets ignorerar min_close_ts (lucka 47), så vi filtrerar själva."""
+    from copycheck import cli
+
+    class OldClient(RoutingClient):
+        def get_json(self, url, params=None):
+            body = super().get_json(url, params)
+            if "/historical/" in url:
+                old = {**markets()[0], "ticker": "KXOLD-1-T1", "close_time": "2024-11-06T16:00:00Z"}
+                body = {"markets": body["markets"] + [old], "cursor": ""}
+            return body
+
+    conn = db.connect(":memory:")
+    cli.catalog(OldClient(), conn, "https://k/v2", days=150, now=1794311314, log=lambda *a: None)
+    tickers = {t for (t,) in conn.execute("SELECT ticker FROM kalshi_markets")}
+    assert "KXOLD-1-T1" not in tickers
