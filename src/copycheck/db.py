@@ -140,3 +140,10 @@ def last_trade_ts(conn, wallet):
     return conn.execute(
         "SELECT MAX(trade_ts) FROM pm_activity WHERE wallet = ?", (wallet,)
     ).fetchone()[0]
+
+
+def activity_truncated(conn, wallet):
+    row = conn.execute(
+        "SELECT activity_truncated FROM traders WHERE wallet = ?", (wallet,)
+    ).fetchone()
+    return bool(row and row[0])

@@ -27,8 +27,11 @@ def collect(client, conn, per_list, days, now, log=print, max_pages=20):
         start = max(since, db.last_trade_ts(conn, wallet) or since)
         acts, act_trunc = polymarket.activity(client, wallet, start, max_pages)
         db.insert_activity(conn, acts, seen_ts=now)
-        pos, pos_trunc = polymarket.closed_positions(client, wallet, max_pages)
-        db.upsert_positions(conn, pos)
+        act_trunc = act_trunc or db.activity_truncated(conn, wallet)
+        pos, pos_trunc = [], False
+        if not act_trunc:  # avkortad aktivitet = bot, positionerna behövs inte
+            pos, pos_trunc = polymarket.closed_positions(client, wallet, max_pages)
+            db.upsert_positions(conn, pos)
         conn.execute(
             """UPDATE traders SET collected_ts = ?,
                  activity_truncated = MAX(activity_truncated, ?), positions_truncated = ?

@@ -24,7 +24,8 @@ pos AS (
            SUM(realized_pnl) / NULLIF(SUM(avg_price * total_size), 0) AS margin
     FROM pm_positions GROUP BY wallet
 )
-SELECT t.wallet, t.activity_truncated, act.n, act.days, sides.both_share, pos.n_pos, pos.margin
+SELECT t.wallet, t.activity_truncated, t.positions_truncated,
+       act.n, act.days, sides.both_share, pos.n_pos, pos.margin
 FROM traders t
 LEFT JOIN act USING (wallet)
 LEFT JOIN sides USING (wallet)
@@ -32,10 +33,12 @@ LEFT JOIN pos USING (wallet)
 """
 
 
-def bot_reasons(truncated, n, days, both_share, n_pos, margin):
+def bot_reasons(truncated, pos_truncated, n, days, both_share, n_pos, margin):
     reasons = []
     if truncated:
         reasons.append("avkortad aktivitet (för många affärer)")
+    if pos_truncated:
+        reasons.append("avkortade positioner (för många marknader)")
     if n and n / max(days or 0, 1) > MAX_TRADES_PER_DAY:
         reasons.append(f"{n / max(days, 1):.0f} affärer/dag")
     if both_share is not None and both_share > MAX_BOTH_SIDES_SHARE:
