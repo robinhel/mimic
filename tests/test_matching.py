@@ -79,6 +79,15 @@ def test_tolka_svar_validerar():
         {"ticker": "C", "level": "none", "outcome0_side": None, "reason": ""},
     ]
     assert matching.parse_judgement("inte json", {"A"}) == []
+    assert matching.parse_judgement(None, {"A"}) == []
+
+
+def test_tolka_svar_i_kodblock_med_text_runt():
+    # Claude via Opper kan svara med text och ```json-block trots JSON-läge.
+    inner = {"candidates": [{"ticker": "A", "level": "exact", "outcome0_side": "yes"}]}
+    text = f"Här är bedömningen:\n```json\n{json.dumps(inner)}\n```\nKlart."
+    got = matching.parse_judgement(text, {"A"})
+    assert got == [{"ticker": "A", "level": "exact", "outcome0_side": "yes", "reason": ""}]
 
 
 def test_kalshi_sida_for_token():
