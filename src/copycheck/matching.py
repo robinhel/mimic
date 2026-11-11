@@ -119,9 +119,10 @@ def accuracy(conn, level):
 
 
 def openai_llm(base_url, api_key, model):
-    """OpenAI-kompatibelt API (Anthropic, Opper eller Berget AI), temperatur 0.
+    """OpenAI-kompatibelt API (Anthropic, Opper eller Berget AI).
 
-    Anthropic ignorerar response_format, så parse_judgement tål text runt JSON."""
+    Ingen temperature och inget JSON-läge: claude-sonnet-5-5 avvisar båda (400).
+    Prompten kräver JSON, och parse_judgement tål text runt svaret."""
     from openai import OpenAI
 
     client = OpenAI(base_url=base_url, api_key=api_key, max_retries=5)
@@ -130,9 +131,7 @@ def openai_llm(base_url, api_key, model):
         resp = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0,
             max_tokens=2000,  # fem kandidater får plats; Anthropic kräver ett tak
-            response_format={"type": "json_object"},
         )
         return resp.choices[0].message.content
 
