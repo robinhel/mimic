@@ -80,6 +80,21 @@ def test_run_skriver_en_rad_per_signal_strategi_och_fordrojning():
     assert conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0] == 3 * n
 
 
+def test_run_anvander_kalshis_stangningstid():
+    conn = setup()  # PM:s slutdatum ligger 10 dagar efter signalen
+    conn.execute(
+        """UPDATE kalshi_markets SET close_ts = (SELECT trigger_ts + 1800 FROM signals s
+           JOIN matches m ON m.pm_condition = s.condition_id WHERE m.kalshi_ticker = 'K1')
+           WHERE ticker = 'K1'"""
+    )
+    backtest.run(conn, KalshiClient(), "https://k", *TRAIN, TEST_END, backtest.Config(), top=5,
+                 log=lambda *a: None)  # fmt: skip
+    reasons = {r for (r,) in conn.execute(
+        "SELECT DISTINCT skip_reason FROM sim_trades WHERE kalshi_ticker = 'K1'"
+    )}  # fmt: skip
+    assert reasons == {"short_market"}
+
+
 def test_avvisad_matchning_anvands_inte():
     conn = setup()
     conn.execute("UPDATE matches SET review_ok = 0 WHERE kalshi_ticker = 'K1'")
