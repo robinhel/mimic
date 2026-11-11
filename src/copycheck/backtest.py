@@ -57,7 +57,10 @@ def _skip(s, strategy, delay, reason):
 
 def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
     """En kopierad affär. `sells` = traderns säljtider för samma token efter signalen."""
-    if s["pm_end_ts"] and s["pm_end_ts"] - s["trigger_ts"] < SHORT_MARKET:
+    # Kalshis close_ts är rätt tid. Gammas slutdatum ligger ofta en vecka efter matchen.
+    # Signaler efter stängningen hamnar också här (negativ tid kvar).
+    end = s.get("kalshi_close_ts") or s["pm_end_ts"]
+    if end and end - s["trigger_ts"] < SHORT_MARKET:
         return _skip(s, strategy, delay, "short_market")
     side = kalshi_side(s["outcome_index"], s["outcome0_side"])
     entry_ts = s["trigger_ts"] + delay
@@ -172,7 +175,7 @@ def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=p
         s = {"signal_id": sid, "wallet": wallet, "trigger_ts": trigger, "avg_price": avg,
              "outcome_index": idx, "pm_end_ts": pm_end, "pm_result_index": pm_res,
              "kalshi_ticker": ticker, "outcome0_side": side0, "kalshi_result": k_res,
-             "category": cat}  # fmt: skip
+             "category": cat, "kalshi_close_ts": close}  # fmt: skip
         if ticker is None or side0 is None:
             out += [_skip(s, st, d, "no_match") for st in STRATEGIES for d in DELAYS]
             continue
