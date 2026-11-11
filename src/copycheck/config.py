@@ -36,3 +36,4 @@ TRAIN_DAYS = 90
 TEST_DAYS = 60
 MIN_SIGNAL_USD = 250
 SIGNAL_WINDOW = 10 * 60
+TOP_TRADERS = 10  # match, backtest och live använder samma antal (Robin 2026-11-11)

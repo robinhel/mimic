@@ -84,11 +84,19 @@ def catalog(client, conn, base, days, now, log=print):
     log(f"klart: {total} Kalshi-marknader, sökindex byggt")
 
 
-def match(conn, client, llm, model, log=print):
-    """Matchar varje PM-marknad som har en signal och inte är bedömd än."""
+def match(conn, client, llm, model, log=print, wallets=None, start=0):
+    """Matchar varje PM-marknad som har en signal och inte är bedömd än.
+
+    `wallets` och `start` begränsar till de traders och den period backtestet använder,
+    så att AI:n inte bedömer marknader som aldrig simuleras."""
+    where, params = "trigger_ts >= ?", [start]
+    if wallets is not None:
+        where += f" AND wallet IN ({','.join('?' * len(wallets)) or 'NULL'})"
+        params += wallets
     todo = [c for (c,) in conn.execute(
-        """SELECT DISTINCT condition_id FROM signals
-           WHERE condition_id NOT IN (SELECT pm_condition FROM match_runs)"""
+        f"""SELECT DISTINCT condition_id FROM signals WHERE {where}
+            AND condition_id NOT IN (SELECT pm_condition FROM match_runs)""",
+        params,
     )]  # fmt: skip
     missing = [c for c in todo if db.pm_market(conn, c) is None]
     if missing:
@@ -156,18 +164,20 @@ def main(argv=None) -> None:
     m.add_argument("--db", default=config.DB_PATH)
     m.add_argument("--provider", choices=config.LLM_PROVIDERS, default=config.LLM_PROVIDER)
     m.add_argument("--model", help="annars leverantörens standardmodell i config.py")
+    m.add_argument("--top", type=int, default=config.TOP_TRADERS,
+                   help="bara de traders backtestet väljer, i testperioden (0 = alla)")  # fmt: skip
     r = sub.add_parser("review", help="granska matchningar för hand")
     r.add_argument("--db", default=config.DB_PATH)
     r.add_argument("--level", default="exact")
     b = sub.add_parser("backtest", help="simulera kopiering på testperioden")
     b.add_argument("--db", default=config.DB_PATH)
-    b.add_argument("--top", type=int, default=20, help="antal traders att kopiera")
+    b.add_argument("--top", type=int, default=config.TOP_TRADERS, help="antal traders att kopiera")
     rp = sub.add_parser("report", help="skriv rapporten som markdown")
     rp.add_argument("--db", default=config.DB_PATH)
     rp.add_argument("--out", help="fil att skriva till, annars skärmen")
     lv = sub.add_parser("live", help="livetest: följ valda traders var 30:e sekund")
     lv.add_argument("--db", default=config.DB_PATH)
-    lv.add_argument("--top", type=int, default=20)
+    lv.add_argument("--top", type=int, default=config.TOP_TRADERS)
     lv.add_argument("--wallets", nargs="*", help="plånböcker, annars de bästa på 90 dagar")
     lv.add_argument("--backup", default="backups/copycheck-latest.db")
     args = p.parse_args(argv)
@@ -185,7 +195,14 @@ def main(argv=None) -> None:
         base_url, key_var, default_model = config.LLM_PROVIDERS[args.provider]
         model = args.model or default_model
         llm = matching.openai_llm(base_url, os.environ[key_var], model)
-        match(conn, HttpClient(), llm, f"{args.provider}:{model}")
+        wallets, start = None, 0
+        if args.top:
+            test_start = int(time.time()) - config.TEST_DAYS * 86400
+            train_start = test_start - config.TRAIN_DAYS * 86400
+            chosen = backtest.select_traders(conn, train_start, test_start, top=args.top)
+            wallets, start = [w for w, *_ in chosen], test_start
+            print(f"{len(wallets)} traders valda på träningsperioden")
+        match(conn, HttpClient(), llm, f"{args.provider}:{model}", wallets=wallets, start=start)
     elif args.cmd == "review":
         review(db.connect(args.db), level=args.level)
     elif args.cmd == "backtest":

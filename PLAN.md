@@ -216,6 +216,7 @@ copycheck/
 | Minsta signal | $250 |
 | Antagen slippage i backtest | 1¢ |
 | Matchning | Egen med AI via Anthropic, Opper eller Berget AI (ändrat från Groq 2026-11-11) |
+| Antal traders att kopiera | 10 (ändrat från 20 2026-11-11, håller nere AI-kostnaden) |
 | Var livetestet körs | VM:en |
 
 ---
