@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copycheck import db, matching, polymarket
+from copycheck import db, kalshi, matching, polymarket
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GAMMA = json.loads((FIXTURES / "pm_gamma_markets.json").read_text())
@@ -65,6 +65,25 @@ def test_kandidater_filtreras_pa_stangningstid():
     assert matching.candidates(conn, far) == []
 
 
+def test_kandidater_fran_signalen_nar_pm_slutdatum_ar_sent():
+    # Gammas endDate ligger ofta en vecka efter matchen (Angels-Mariners: 26 sep mot 4 okt).
+    conn = setup()
+    k = kalshi_rows()[0]
+    close = kalshi.iso_ts(k["close_time"])
+    pm = {"question": k["title"], "end_ts": close + 30 * 86400, "signal_ts": close - 3600}
+    assert k["ticker"] in [c["ticker"] for c in matching.candidates(conn, pm)]
+    pm["signal_ts"] = close + 60  # Kalshi stängde före signalen, går inte att kopiera
+    assert k["ticker"] not in [c["ticker"] for c in matching.candidates(conn, pm)]
+
+
+def test_kandidater_hogst_en_per_event():
+    # Struff-Griekspoor: set- och resultatmarknader trängde ut matchvinnaren.
+    conn = setup()
+    pm = {"question": "Jaime Jaquez threes Isaiah Collier assists", "end_ts": 1794529800}
+    events = [c["event_ticker"] for c in matching.candidates(conn, pm)]
+    assert sorted(events) == ["KXNBA3PTPROT-26NOV10MILNYK", "KXNBAASTPROT-26NOV10MIAUTA"]
+
+
 def test_tolka_svar_validerar():
     text = json.dumps({"candidates": [
         {"ticker": "A", "level": "exact", "outcome0_side": "no", "reason": "samma"},
@@ -124,8 +143,27 @@ def test_match_sparar_och_kor_bara_en_gang():
     matching.match_market(conn, pm, llm, model="m")
     assert len(calls) == 1
     assert k["rules_primary"] in calls[0][-1]["content"]
+    # Regler för oavgjort och uppskjuten match står i rules_secondary (Cowboys-Packers).
+    assert k["rules_secondary"][:100] in calls[0][-1]["content"]
     row = conn.execute("SELECT kalshi_ticker, level, outcome0_side FROM matches").fetchone()
     assert row == (k["ticker"], "exact", "yes")
+
+
+def test_match_anvander_forsta_signalen_for_sokfonstret():
+    conn = setup()
+    k = kalshi_rows()[0]
+    close = kalshi.iso_ts(k["close_time"])
+    conn.execute(
+        """INSERT INTO signals (wallet, condition_id, token_id, outcome_index, avg_price, usdc,
+                                first_ts, trigger_ts, last_ts, n_fills)
+           VALUES ('w', 'c3', 't', 0, 0.5, 300, ?, ?, ?, 1)""",
+        (close - 3600, close - 3600, close - 3600),
+    )
+    pm = {"condition_id": "c3", "question": k["title"], "description": "",
+          "outcomes": ["Yes", "No"], "end_ts": close + 30 * 86400}  # fmt: skip
+    calls = []
+    matching.match_market(conn, pm, lambda m: calls.append(m) or "{}", model="m")
+    assert calls and k["ticker"] in calls[0][-1]["content"]
 
 
 def test_utan_kandidater_ingen_ai_men_markerad():
