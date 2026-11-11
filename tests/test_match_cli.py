@@ -37,6 +37,20 @@ def test_match_hamtar_pm_marknader_och_bedomer_varje_en_gang():
     assert conn.execute("SELECT COUNT(*) FROM match_runs").fetchone()[0] == len(GAMMA)
 
 
+def test_match_bara_valda_traders_i_testperioden():
+    conn = setup()  # plånbok 'w', en signal per Gamma-marknad med trigger_ts 0, 1, 2 ...
+    conn.execute("UPDATE signals SET wallet = 'x' WHERE trigger_ts = 2")
+    cli.match(conn, GammaClient(), llm=lambda m: '{"candidates": []}', model="m",
+              log=lambda *a: None, wallets=["w"], start=1)  # fmt: skip
+    done = {c for (c,) in conn.execute("SELECT pm_condition FROM match_runs")}
+    want = {r[0] for r in conn.execute(
+        "SELECT condition_id FROM signals WHERE wallet = 'w' AND trigger_ts >= 1"
+    )}  # fmt: skip
+    assert want and done == want
+    assert GAMMA[0]["conditionId"] not in done  # före testperioden
+    assert GAMMA[2]["conditionId"] not in done  # annan plånbok
+
+
 def test_review_sparar_svar_och_visar_traffsakerhet():
     conn = db.connect(":memory:")
     for i in range(3):
