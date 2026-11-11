@@ -63,6 +63,15 @@ def test_match_stannar_vid_kostnadsgransen():
     assert conn.execute("SELECT COUNT(*) FROM match_runs").fetchone()[0] == len(GAMMA)
 
 
+def test_perioderna_raknas_fran_insamlingen_inte_fran_nu():
+    # match och backtest måste välja samma traders och testperiod, även olika dagar.
+    conn = db.connect(":memory:")
+    conn.execute("INSERT INTO traders (wallet, sources, collected_ts) VALUES ('a', 's', 5000000)")
+    conn.execute("INSERT INTO traders (wallet, sources, collected_ts) VALUES ('b', 's', 4000000)")
+    day = 86400
+    assert cli.periods(conn) == (5000000 - 150 * day, 5000000 - 60 * day, 5000000)
+
+
 def test_review_sparar_svar_och_visar_traffsakerhet():
     conn = db.connect(":memory:")
     for i in range(3):
