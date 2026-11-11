@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import time
 
 from copycheck import (
@@ -151,9 +152,10 @@ def main(argv=None) -> None:
     s = sub.add_parser("search", help="sök bland Kalshi-marknaderna")
     s.add_argument("text")
     s.add_argument("--db", default=config.DB_PATH)
-    m = sub.add_parser("match", help="matcha PM-marknader med signaler mot Kalshi (Groq)")
+    m = sub.add_parser("match", help="matcha PM-marknader med signaler mot Kalshi (AI)")
     m.add_argument("--db", default=config.DB_PATH)
-    m.add_argument("--model", default=config.GROQ_MODEL)
+    m.add_argument("--provider", choices=config.LLM_PROVIDERS, default=config.LLM_PROVIDER)
+    m.add_argument("--model", help="annars leverantörens standardmodell i config.py")
     r = sub.add_parser("review", help="granska matchningar för hand")
     r.add_argument("--db", default=config.DB_PATH)
     r.add_argument("--level", default="exact")
@@ -180,7 +182,10 @@ def main(argv=None) -> None:
         conn = db.connect(args.db)
         n = signals.build(conn, config.MIN_SIGNAL_USD, config.SIGNAL_WINDOW)
         print(f"{n} signaler")
-        match(conn, HttpClient(), matching.groq_llm(args.model), args.model)
+        base_url, key_var, default_model = config.LLM_PROVIDERS[args.provider]
+        model = args.model or default_model
+        llm = matching.openai_llm(base_url, os.environ[key_var], model)
+        match(conn, HttpClient(), llm, f"{args.provider}:{model}")
     elif args.cmd == "review":
         review(db.connect(args.db), level=args.level)
     elif args.cmd == "backtest":

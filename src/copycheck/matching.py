@@ -54,8 +54,10 @@ def prompt(pm, cands):
 
 def parse_judgement(text, tickers):
     """Validerar AI-svaret. Okända tickers tas bort, okända värden blir none/None."""
+    text = text or ""
     try:
-        items = json.loads(text).get("candidates") or []
+        # Vissa modeller lägger text eller ```json runt svaret. Ta från första { till sista }.
+        items = json.loads(text[text.find("{") : text.rfind("}") + 1]).get("candidates") or []
     except (ValueError, AttributeError):
         return []
     out = []
@@ -116,11 +118,11 @@ def accuracy(conn, level):
     return ok, n
 
 
-def groq_llm(model):
-    """Groq med JSON-svar och temperatur 0. Nyckeln läses från GROQ_API_KEY."""
-    from groq import Groq
+def openai_llm(base_url, api_key, model):
+    """OpenAI-kompatibelt API (Opper eller Berget AI) med JSON-svar och temperatur 0."""
+    from openai import OpenAI
 
-    client = Groq(max_retries=5)
+    client = OpenAI(base_url=base_url, api_key=api_key, max_retries=5)
 
     def call(messages):
         resp = client.chat.completions.create(
