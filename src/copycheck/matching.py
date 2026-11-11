@@ -3,7 +3,7 @@
 import json
 import time
 
-from copycheck import db
+from copycheck import config, db
 
 LEVELS = {"exact", "near", "related", "none"}
 SIDES = {"yes", "no"}
@@ -118,7 +118,23 @@ def accuracy(conn, level):
     return ok, n
 
 
-def openai_llm(base_url, api_key, model):
+def record_usage(conn, model, tokens_in, tokens_out, now=None):
+    """Sparar ett AI-anrops kostnad. `model` är "leverantör:modell"."""
+    price_in, price_out = config.LLM_PRICES.get(model, config.LLM_PRICE_UNKNOWN)
+    usd = (tokens_in * price_in + tokens_out * price_out) / 1_000_000
+    conn.execute(
+        "INSERT INTO llm_usage (ts, model, tokens_in, tokens_out, usd) VALUES (?, ?, ?, ?, ?)",
+        (now or int(time.time()), model, tokens_in, tokens_out, usd),
+    )
+    conn.commit()
+
+
+def spent(conn):
+    """Total AI-kostnad i USD, alla körningar."""
+    return conn.execute("SELECT COALESCE(SUM(usd), 0) FROM llm_usage").fetchone()[0]
+
+
+def openai_llm(base_url, api_key, model, on_usage=None):
     """OpenAI-kompatibelt API (Anthropic, Opper eller Berget AI).
 
     Ingen temperature och inget JSON-läge: claude-sonnet-5-5 avvisar båda (400).
@@ -133,6 +149,8 @@ def openai_llm(base_url, api_key, model):
             messages=messages,
             max_tokens=2000,  # fem kandidater får plats; Anthropic kräver ett tak
         )
+        if on_usage and resp.usage:
+            on_usage(resp.usage.prompt_tokens, resp.usage.completion_tokens)
         return resp.choices[0].message.content
 
     return call

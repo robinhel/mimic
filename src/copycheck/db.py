@@ -145,6 +145,13 @@ CREATE TABLE IF NOT EXISTS heartbeats (
     component TEXT NOT NULL,
     status TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS llm_usage (  -- varje AI-anrop, för kostnadsgränsen
+    ts INTEGER NOT NULL,
+    model TEXT NOT NULL,            -- "leverantör:modell"
+    tokens_in INTEGER NOT NULL,
+    tokens_out INTEGER NOT NULL,
+    usd REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS match_runs (
     pm_condition TEXT PRIMARY KEY,
     n_candidates INTEGER NOT NULL,

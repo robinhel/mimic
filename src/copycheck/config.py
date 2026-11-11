@@ -30,6 +30,15 @@ LLM_PROVIDERS = {
     "berget": ("https://api.berget.ai/v1", "BERGET_API_KEY", "moonshotai/Kimi-K3.1-Pro"),
 }
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
+# USD per miljon tokens (in, ut). Källa: platform.claude.com, 2026-11-11.
+LLM_PRICES = {
+    "anthropic:claude-sonnet-5-5": (2.0, 10.0),
+    "opper:anthropic/claude-sonnet-5-5": (2.0, 10.0),
+}
+LLM_PRICE_UNKNOWN = (10.0, 50.0)  # högt med flit, så att gränsen hellre slår till för tidigt
+# Kostnadsgräns för all AI-matchning, summerad över alla körningar.
+# 50 USD är ca 46 EUR, under Robins gräns på 50 EUR.
+MAX_LLM_USD = float(os.environ.get("MAX_LLM_USD", "50"))
 
 DB_PATH = os.environ.get("COPYCHECK_DB", "copycheck.db")
 TRAIN_DAYS = 90

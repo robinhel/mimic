@@ -217,6 +217,7 @@ copycheck/
 | Antagen slippage i backtest | 1¢ |
 | Matchning | Egen med AI via Anthropic, Opper eller Berget AI (ändrat från Groq 2026-11-11) |
 | Antal traders att kopiera | 10 (ändrat från 20 2026-11-11, håller nere AI-kostnaden) |
+| Kostnadsgräns för AI-matchningen | 50 USD (ca 46 EUR) totalt, alla körningar. `copycheck match` stannar själv. |
 | Var livetestet körs | VM:en |
 
 ---

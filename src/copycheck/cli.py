@@ -84,7 +84,7 @@ def catalog(client, conn, base, days, now, log=print):
     log(f"klart: {total} Kalshi-marknader, sökindex byggt")
 
 
-def match(conn, client, llm, model, log=print, wallets=None, start=0):
+def match(conn, client, llm, model, log=print, wallets=None, start=0, max_usd=None):
     """Matchar varje PM-marknad som har en signal och inte är bedömd än.
 
     `wallets` och `start` begränsar till de traders och den period backtestet använder,
@@ -103,6 +103,10 @@ def match(conn, client, llm, model, log=print, wallets=None, start=0):
         db.upsert_pm_markets(conn, polymarket.gamma_markets(client, missing))
     log(f"{len(todo)} PM-marknader att matcha ({len(missing)} hämtade från Gamma)")
     for i, cid in enumerate(todo, 1):
+        # Kollas före varje anrop, så gränsen passeras med högst ett anrop (några cent).
+        if max_usd is not None and matching.spent(conn) >= max_usd:
+            log(f"stopp: kostnadsgränsen {max_usd} USD nådd, {i - 1}/{len(todo)} bedömda")
+            break
         pm = db.pm_market(conn, cid)
         if pm is None:
             log(f"saknas i Gamma: {cid}")
@@ -166,6 +170,8 @@ def main(argv=None) -> None:
     m.add_argument("--model", help="annars leverantörens standardmodell i config.py")
     m.add_argument("--top", type=int, default=config.TOP_TRADERS,
                    help="bara de traders backtestet väljer, i testperioden (0 = alla)")  # fmt: skip
+    m.add_argument("--max-usd", type=float, default=config.MAX_LLM_USD,
+                   help="kostnadsgräns för all AI-matchning, alla körningar")  # fmt: skip
     r = sub.add_parser("review", help="granska matchningar för hand")
     r.add_argument("--db", default=config.DB_PATH)
     r.add_argument("--level", default="exact")
@@ -194,7 +200,11 @@ def main(argv=None) -> None:
         print(f"{n} signaler")
         base_url, key_var, default_model = config.LLM_PROVIDERS[args.provider]
         model = args.model or default_model
-        llm = matching.openai_llm(base_url, os.environ[key_var], model)
+        name = f"{args.provider}:{model}"
+        llm = matching.openai_llm(
+            base_url, os.environ[key_var], model,
+            on_usage=lambda i, o: matching.record_usage(conn, name, i, o),
+        )  # fmt: skip
         wallets, start = None, 0
         if args.top:
             test_start = int(time.time()) - config.TEST_DAYS * 86400
@@ -202,7 +212,8 @@ def main(argv=None) -> None:
             chosen = backtest.select_traders(conn, train_start, test_start, top=args.top)
             wallets, start = [w for w, *_ in chosen], test_start
             print(f"{len(wallets)} traders valda på träningsperioden")
-        match(conn, HttpClient(), llm, f"{args.provider}:{model}", wallets=wallets, start=start)
+        match(conn, HttpClient(), llm, name, wallets=wallets, start=start, max_usd=args.max_usd)
+        print(f"AI-kostnad hittills: {matching.spent(conn):.2f} USD av {args.max_usd}")
     elif args.cmd == "review":
         review(db.connect(args.db), level=args.level)
     elif args.cmd == "backtest":
