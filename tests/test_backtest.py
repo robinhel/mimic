@@ -66,6 +66,21 @@ def test_kort_marknad_hoppas_over():
     assert r["skip_reason"] == "short_market"
 
 
+def test_kort_marknad_raknas_fran_kalshis_stangning():
+    # Gammas slutdatum ligger ofta en vecka efter matchen. Kalshis close_ts är rätt.
+    s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 + 1800)
+    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] == (
+        "short_market"
+    )
+    # Signal efter att Kalshi stängt: får inte köpas till sista priset före stängningen.
+    s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 - 60)
+    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] == (
+        "short_market"
+    )
+    s = sig(pm_end_ts=1000 + 1800, kalshi_close_ts=1000 + 86400)
+    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] is None
+
+
 def test_gammalt_pris_markeras_stale():
     r = backtest.simulate(sig(), flat("0.4", "0.44", ts=1000 - 2000), [], 0, "A", CFG)
     assert r["stale"] == 1
