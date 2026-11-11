@@ -84,6 +84,15 @@ def catalog(client, conn, base, days, now, log=print):
     log(f"klart: {total} Kalshi-marknader, sökindex byggt")
 
 
+def periods(conn):
+    """(träningsstart, teststart, testslut), räknat från senaste insamlingen.
+
+    match och backtest väljer då samma traders och testperiod, även körda olika dagar."""
+    end = conn.execute("SELECT MAX(collected_ts) FROM traders").fetchone()[0] or int(time.time())
+    test_start = end - config.TEST_DAYS * 86400
+    return test_start - config.TRAIN_DAYS * 86400, test_start, end
+
+
 def match(conn, client, llm, model, log=print, wallets=None, start=0, max_usd=None):
     """Matchar varje PM-marknad som har en signal och inte är bedömd än.
 
@@ -207,8 +216,7 @@ def main(argv=None) -> None:
         )  # fmt: skip
         wallets, start = None, 0
         if args.top:
-            test_start = int(time.time()) - config.TEST_DAYS * 86400
-            train_start = test_start - config.TRAIN_DAYS * 86400
+            train_start, test_start, _ = periods(conn)
             chosen = backtest.select_traders(conn, train_start, test_start, top=args.top)
             wallets, start = [w for w, *_ in chosen], test_start
             print(f"{len(wallets)} traders valda på träningsperioden")
@@ -218,11 +226,9 @@ def main(argv=None) -> None:
         review(db.connect(args.db), level=args.level)
     elif args.cmd == "backtest":
         conn = db.connect(args.db)
-        now = int(time.time())
-        test_start = now - config.TEST_DAYS * 86400
-        train_start = test_start - config.TRAIN_DAYS * 86400
+        train_start, test_start, end = periods(conn)
         signals.build(conn, config.MIN_SIGNAL_USD, config.SIGNAL_WINDOW)
-        backtest.run(conn, HttpClient(), config.KALSHI_BASE_URL, train_start, test_start, now,
+        backtest.run(conn, HttpClient(), config.KALSHI_BASE_URL, train_start, test_start, end,
                      backtest.Config(), top=args.top)  # fmt: skip
     elif args.cmd == "report":
         text = report.render(db.connect(args.db), int(time.time()))
