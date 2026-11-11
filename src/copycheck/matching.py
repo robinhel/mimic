@@ -141,7 +141,8 @@ def openai_llm(base_url, api_key, model, on_usage=None):
     Prompten kräver JSON, och parse_judgement tål text runt svaret."""
     from openai import OpenAI
 
-    client = OpenAI(base_url=base_url, api_key=api_key, max_retries=5)
+    # Standard är 600 s per försök. En tyst död anslutning låste körningen i 38 min.
+    client = OpenAI(base_url=base_url, api_key=api_key, max_retries=5, timeout=60)
 
     def call(messages):
         resp = client.chat.completions.create(
