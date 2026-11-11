@@ -18,6 +18,9 @@ några Kalshi-marknader. Bedöm varje Kalshi-marknad för sig.
 Nivåer:
 - exact: samma händelse, samma källa, samma gränsvärde, samma datum och tidszon.
   De två avgörs alltid på samma sätt.
+  Regler för inställd, uppskjuten eller avbruten match, walkover och oavgjort räknas
+  alltid som sällsynta specialfall. Skiljer sig bara de, och samma utfall vinner i
+  vanliga fall, är det exact. Nämn specialfallet i reason.
 - near: samma händelse men någon skillnad i regler, datum, källa eller gränsvärde.
 - related: samma ämne men en annan fråga.
 - none: inget samband.
