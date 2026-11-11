@@ -31,7 +31,7 @@ Läs `PLAN.md` först. Bygg **en fas i taget**, i ordning. Gå inte vidare förr
 
 ## Verktyg
 
-- Python 3.12+, `requests`, `sqlite3`, `openai` (klient för Opper och Berget AI, båda OpenAI-kompatibla)
+- Python 3.12+, `requests`, `sqlite3`, `openai` (klient för Anthropic, Opper och Berget AI, alla OpenAI-kompatibla)
 - `ruff check . && ruff format .` och `pytest` ska gå igenom innan commit.
 
 ## Om något i API:t inte stämmer med planen

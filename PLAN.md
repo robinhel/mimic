@@ -60,7 +60,7 @@ Två frågor med nästan samma titel kan avgöras olika. Matchningen måste jäm
 
 | # | Lucka | Lösning |
 |---|---|---|
-| 18 | Titlarna skiljer sig, och samma titel kan ha olika regler (källa, datum, tidszon, gränsvärde). | Steg 1: hitta kandidater med text-likhet. Steg 2: låt **AI** (Opper eller Berget AI) jämföra *reglerna* (Kalshi `rules_primary`, Polymarkets beskrivning) och svara `exact` / `near` / `related` / `none`, plus **vilken sida** som motsvarar vilken. |
+| 18 | Titlarna skiljer sig, och samma titel kan ha olika regler (källa, datum, tidszon, gränsvärde). | Steg 1: hitta kandidater med text-likhet. Steg 2: låt **AI** (Anthropic, Opper eller Berget AI) jämföra *reglerna* (Kalshi `rules_primary`, Polymarkets beskrivning) och svara `exact` / `near` / `related` / `none`, plus **vilken sida** som motsvarar vilken. |
 | 19 | YES på ena sidan kan motsvara NO på den andra. | Matchningen sparar `side_map` (t.ex. PM "Yes" → Kalshi "no"). |
 | 20 | Polymarket har frågor med flera alternativ, Kalshi har en marknad per alternativ. | Matcha på **alternativ-nivå** (en Polymarket-token ↔ en Kalshi-ticker). |
 | 21 | AI:n kan ha fel. | Spara matchningar i databasen (varje par körs bara en gång). Gör ett litet CLI där du granskar de första ~50 för hand och mäter träffsäkerheten. |
@@ -87,7 +87,7 @@ Två frågor med nästan samma titel kan avgöras olika. Matchningen måste jäm
 | 32 | Om programmet ligger nere missar vi priset i rätt ögonblick. | Varje körning skriver en "heartbeat". Affärer som upptäcks sent markeras `late=true` och räknas separat. |
 | 33 | Tidszoner. | Allt sparas i **UTC**. Svensk tid bara i rapporten. |
 | 34 | Databasen kan gå sönder. | SQLite med WAL-läge, plus en daglig backup-fil. |
-| 35 | API-nyckel för AI:n (Opper eller Berget AI). | `.env` (står i `.gitignore`), med `.env.example` i repot. |
+| 35 | API-nyckel för AI:n (Anthropic, Opper eller Berget AI). | `.env` (står i `.gitignore`), med `.env.example` i repot. |
 
 ### Hittat vid test av API:erna (2026-11-10)
 
@@ -135,7 +135,7 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 - **Klart när:** marknaderna går att söka på i databasen.
 
 ### Fas 3 – Matchning
-- Kandidatsökning → AI-bedömning (Opper eller Berget AI) → spara i `matches`
+- Kandidatsökning → AI-bedömning (Anthropic, Opper eller Berget AI) → spara i `matches`
 - `copycheck review` för granskning för hand
 - **Klart när:** träffsäkerheten för `exact` är mätt på minst 50 par.
 
@@ -215,7 +215,7 @@ copycheck/
 | Tränings-/testperiod | 90 dagar / 60 dagar |
 | Minsta signal | $250 |
 | Antagen slippage i backtest | 1¢ |
-| Matchning | Egen med AI via Opper eller Berget AI (ändrat från Groq 2026-11-11) |
+| Matchning | Egen med AI via Anthropic, Opper eller Berget AI (ändrat från Groq 2026-11-11) |
 | Var livetestet körs | VM:en |
 
 ---

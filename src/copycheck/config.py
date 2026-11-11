@@ -22,13 +22,14 @@ KALSHI_FALLBACK_URL = os.environ.get(
 )
 POLYMARKET_DATA_URL = os.environ.get("POLYMARKET_DATA_URL", "https://data-api.polymarket.com")
 POLYMARKET_GAMMA_URL = os.environ.get("POLYMARKET_GAMMA_URL", "https://gamma-api.polymarket.com")
-# AI för matchningen (fas 3). Båda har OpenAI-kompatibla API:er.
+# AI för matchningen (fas 3). Alla har OpenAI-kompatibla API:er.
 # leverantör: (bas-URL, miljövariabel med nyckeln, standardmodell)
 LLM_PROVIDERS = {
+    "anthropic": ("https://api.anthropic.com/v1/", "ANTHROPIC_API_KEY", "claude-sonnet-5-5"),
     "opper": ("https://api.opper.ai/v3/compat", "OPPER_API_KEY", "anthropic/claude-sonnet-5-5"),
     "berget": ("https://api.berget.ai/v1", "BERGET_API_KEY", "moonshotai/Kimi-K3.1-Pro"),
 }
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "opper")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
 
 DB_PATH = os.environ.get("COPYCHECK_DB", "copycheck.db")
 TRAIN_DAYS = 90
