@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copycheck import cli, db
+from copycheck import cli, db, matching
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GAMMA = json.loads((FIXTURES / "pm_gamma_markets.json").read_text())
@@ -49,6 +49,18 @@ def test_match_bara_valda_traders_i_testperioden():
     assert want and done == want
     assert GAMMA[0]["conditionId"] not in done  # före testperioden
     assert GAMMA[2]["conditionId"] not in done  # annan plånbok
+
+
+def test_match_stannar_vid_kostnadsgransen():
+    conn = setup()
+    matching.record_usage(conn, "anthropic:claude-sonnet-5-5", 2_000_000, 0, now=1)  # 4 $
+    out = []
+    cli.match(conn, GammaClient(), llm=lambda m: 1 / 0, model="m", log=out.append, max_usd=4)
+    assert conn.execute("SELECT COUNT(*) FROM match_runs").fetchone()[0] == 0
+    assert any("gräns" in line for line in out)
+    cli.match(conn, GammaClient(), llm=lambda m: '{"candidates": []}', model="m",
+              log=lambda *a: None, max_usd=5)  # fmt: skip
+    assert conn.execute("SELECT COUNT(*) FROM match_runs").fetchone()[0] == len(GAMMA)
 
 
 def test_review_sparar_svar_och_visar_traffsakerhet():

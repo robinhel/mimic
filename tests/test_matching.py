@@ -90,6 +90,16 @@ def test_tolka_svar_i_kodblock_med_text_runt():
     assert got == [{"ticker": "A", "level": "exact", "outcome0_side": "yes", "reason": ""}]
 
 
+def test_kostnad_raknas_per_modell_och_summeras():
+    conn = db.connect(":memory:")
+    # Sonnet 5.5: 2 $ in och 10 $ ut per miljon tokens.
+    matching.record_usage(conn, "anthropic:claude-sonnet-5-5", 1_000_000, 100_000, now=1)
+    assert matching.spent(conn) == 3.0
+    # Okänt pris räknas högt, så att gränsen hellre slår till för tidigt.
+    matching.record_usage(conn, "berget:okand-modell", 1_000_000, 0, now=2)
+    assert matching.spent(conn) > 3.0 + 2.0
+
+
 def test_kalshi_sida_for_token():
     assert matching.kalshi_side(0, "yes") == "yes"
     assert matching.kalshi_side(1, "yes") == "no"
