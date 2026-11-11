@@ -318,8 +318,8 @@ def search_kalshi(conn, text, limit=20, min_close=None, max_close=None):
     if not q:
         return []
     cur = conn.execute(
-        """SELECT m.ticker, m.title, m.yes_sub_title, m.rules_primary, m.close_ts, m.status,
-                  m.result
+        """SELECT m.ticker, m.event_ticker, m.title, m.yes_sub_title, m.rules_primary,
+                  m.rules_secondary, m.close_ts, m.status, m.result
            FROM kalshi_search s JOIN kalshi_markets m ON m.id = s.rowid
            WHERE kalshi_search MATCH ? AND m.close_ts BETWEEN ? AND ?
            ORDER BY bm25(kalshi_search) LIMIT ?""",

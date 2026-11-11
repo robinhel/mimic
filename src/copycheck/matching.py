@@ -8,7 +8,9 @@ from copycheck import config, db
 LEVELS = {"exact", "near", "related", "none"}
 SIDES = {"yes", "no"}
 CLOSE_WINDOW = 7 * 86400  # Kalshi-marknaden måste stänga inom en vecka från PM:s slutdatum
-MAX_CANDIDATES = 5
+MAX_CANDIDATES = 6
+SEARCH_HITS = 50  # hämtas innan vi behåller en per event
+RULES_SECONDARY_CHARS = 600
 
 SYSTEM = """Du jämför kontrakt på prediktionsmarknader. Du får en Polymarket-marknad och
 några Kalshi-marknader. Bedöm varje Kalshi-marknad för sig.
@@ -23,15 +25,27 @@ Nivåer:
 outcome0_side: vilken sida på Kalshi ("yes" eller "no") som vinner exakt när
 Polymarkets första utfall vinner. Läs reglerna noga, sidan kan vara omvänd.
 
+Ta bara med kandidater som är exact eller near. Utelämna related och none.
+reason: högst 20 ord. Finns ingen exact eller near: {"candidates": []}.
+
 Svara bara med JSON:
 {"candidates": [{"ticker": "...", "level": "...", "outcome0_side": "yes|no", "reason": "kort"}]}"""
 
 
 def candidates(conn, pm):
+    """Kalshi-marknader som liknar frågan, högst en per event.
+
+    Gammas slutdatum ligger ofta en vecka efter matchen, så fönstret börjar vid första
+    signalen när den finns: Kalshi-marknaden måste stänga efter att vi kan kopiera."""
     end = pm.get("end_ts") or 0
-    return db.search_kalshi(
-        conn, pm["question"], MAX_CANDIDATES, end - CLOSE_WINDOW, end + CLOSE_WINDOW
-    )
+    start = pm.get("signal_ts") or end - CLOSE_WINDOW
+    hits = db.search_kalshi(conn, pm["question"], SEARCH_HITS, start, end + CLOSE_WINDOW)
+    seen, out = set(), []
+    for h in hits:  # undermarknader i samma event (set, resultat) trängde annars ut huvudfrågan
+        if h["event_ticker"] not in seen:
+            seen.add(h["event_ticker"])
+            out.append(h)
+    return out[:MAX_CANDIDATES]
 
 
 def prompt(pm, cands):
@@ -48,6 +62,7 @@ def prompt(pm, cands):
             f"- ticker: {c['ticker']}",
             f"  titel: {c['title']} / {c.get('yes_sub_title') or ''}",
             f"  regler: {c.get('rules_primary') or ''}",
+            f"  fler regler: {(c.get('rules_secondary') or '')[:RULES_SECONDARY_CHARS]}",
         ]
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "\n".join(lines)}]
 
@@ -88,6 +103,9 @@ def match_market(conn, pm, llm, model, now=None):
     if conn.execute("SELECT 1 FROM match_runs WHERE pm_condition = ?", (cid,)).fetchone():
         return
     now = now or int(time.time())
+    if "signal_ts" not in pm:
+        first = "SELECT MIN(trigger_ts) FROM signals WHERE condition_id = ?"
+        pm = {**pm, "signal_ts": conn.execute(first, (cid,)).fetchone()[0]}
     cands = candidates(conn, pm)
     judged = []
     if cands:
