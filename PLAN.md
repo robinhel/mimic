@@ -111,6 +111,17 @@ Två frågor med nästan samma titel kan avgöras olika. Matchningen måste jäm
 | 46 | Insamlingen blev 5 GB, nästan bara bottar. | Hämta inte positioner för plånböcker med avkortad aktivitet, de är redan bottar. |
 | 47 | `/historical/markets` ignorerar `min_close_ts` och gav marknader ända från 2021. Katalogen blev 4,3 miljoner rader och 10 GB. | `catalog` slänger marknader som stängde före fönstret. |
 
+### Hittat vid körning på riktig data (2026-11-11 och 12)
+
+| # | Lucka | Lösning |
+|---|---|---|
+| 48 | Gammas `endDate` är matchstart för sport, inte slutet. 35 % av signalerna kom efter den, under matchen. | Sökfönstret för matchning börjar vid första signalen. Spärren för korta marknader (lucka 39) är borttagen; botfiltret tar bottarna. |
+| 49 | Undermarknader (set, resultat) från samma Kalshi-event trängde ut huvudfrågan. | Kandidatsökningen tar högst en marknad per event. |
+| 50 | Kalshis regler för oavgjort och uppskjuten match står i `rules_secondary`. | Skickas med till AI:n. Skiljer sig bara sådana specialfall räknas frågan som `exact`. |
+| 51 | Köp kunde simuleras efter att marknaden stängt. | Hoppas över som `closed` (Kalshi `close_ts`, Polymarket `closedTime`). |
+| 52 | `match` och `backtest` räknade perioderna från "nu". | Perioderna räknas från senaste insamlingen. |
+| 53 | Huvudfrågan är om det lönar sig att kopiera, inte bara på Kalshi. | Backtestet köper också på Polymarket, samma token som tradern. Ingen matchning behövs. Pris: `clob.polymarket.com/prices-history` (mittpris per minut) + slippage. Avgift per marknad från Gammas `feeSchedule`: `C × rate × P × (1 − P)`. |
+
 ---
 
 ## 3. Faser
@@ -143,6 +154,7 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 - Bygg signaler (lucka 13–14)
 - Ranka traders på **träningsperioden** (default 90 dagar)
 - Simulera på **testperioden** (de 60 dagarna efter) för varje fördröjning × strategi
+- Två börser: **Polymarket** för alla signaler, **Kalshi** där matchningen hittat samma fråga
 - **Klart när:** `copycheck backtest` skriver resultat till `sim_trades`.
 
 ### Fas 5 – Rapport → BESLUTSPUNKT
