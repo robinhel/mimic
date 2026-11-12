@@ -1,10 +1,15 @@
-"""Livetest (fas 6), pappershandel: hämtar nya affärer och sparar Kalshis orderbok direkt."""
+"""Livetest (fas 6), pappershandel: hämtar nya affärer och sparar orderböckerna direkt.
+
+Polymarket: orderboken för varje token tradern köper eller säljer, för inköp och försäljning.
+Kalshi: orderboken när ett köp har en exakt matchning."""
 
 import logging
 import sqlite3
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+
+import requests
 
 from copycheck import db, kalshi, polymarket
 
@@ -34,20 +39,30 @@ def snapshot(conn, client, base, ticker, now):
     )
 
 
+def pm_snapshot(conn, client, token, now):
+    try:
+        bid, ask, size = polymarket.best_bid_ask(polymarket.book(client, token))
+    except requests.HTTPError as e:  # stängd marknad har ingen orderbok
+        log.warning("ingen orderbok för %s: %s", token, e)
+        return
+    conn.execute(
+        "INSERT OR IGNORE INTO pm_quotes VALUES (?, ?, ?, ?, ?)",
+        (token, now, *(None if x is None else float(x) for x in (bid, ask, size))),
+    )
+
+
 def tick(conn, client, base, wallets, now):
     """En runda. Fel stoppar inte tjänsten, de skrivs i heartbeats."""
     try:
-        books = set()
+        books, pm_books = set(), set()
         for wallet in wallets:
             start = db.last_trade_ts(conn, wallet) or now - 3600
             rows, _ = polymarket.activity(client, wallet, start, max_pages=5)
             db.insert_activity(conn, rows, seen_ts=now)
             for r in rows:
-                if r["side"] != "BUY":
-                    continue
-                match = conn.execute(EXACT_MATCH, (r["condition_id"],)).fetchone()
-                if not match:
-                    continue
+                match = None
+                if r["side"] == "BUY":
+                    match = conn.execute(EXACT_MATCH, (r["condition_id"],)).fetchone()
                 cur = conn.execute(
                     "INSERT OR IGNORE INTO live_seen VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (
@@ -57,10 +72,13 @@ def tick(conn, client, base, wallets, now):
                         r["timestamp"],
                         now,
                         int(now - r["timestamp"] > LATE_AFTER),
-                        match[0],
+                        match and match[0],
                     ),  # fmt: skip
                 )
-                if cur.rowcount and match[0] not in books:
+                if cur.rowcount and r["token_id"] not in pm_books:
+                    pm_snapshot(conn, client, r["token_id"], now)
+                    pm_books.add(r["token_id"])
+                if cur.rowcount and match and match[0] not in books:
                     snapshot(conn, client, base, match[0], now)
                     books.add(match[0])
         conn.commit()

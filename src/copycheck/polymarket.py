@@ -62,3 +62,17 @@ def prices_history(client, token, start, end):
     params = {"market": token, "startTs": start, "endTs": end, "fidelity": 1}
     body = client.get_json(config.POLYMARKET_CLOB_URL + "/prices-history", params)
     return body.get("history") or []
+
+
+def book(client, token):
+    """Orderboken för en token. 404 när marknaden saknar orderbok (stängd)."""
+    return client.get_json(config.POLYMARKET_CLOB_URL + "/book", {"token_id": token})
+
+
+def best_bid_ask(book):
+    """(bästa bud, bästa utbud, antal till bästa utbud). Listorna är inte sorterade
+    som man tror (bud stigande, utbud fallande), så ta max och min."""
+    bids = [Decimal(b["price"]) for b in book.get("bids") or []]
+    asks = {Decimal(a["price"]): Decimal(a["size"]) for a in book.get("asks") or []}
+    ask = min(asks, default=None)
+    return max(bids, default=None), ask, asks.get(ask)

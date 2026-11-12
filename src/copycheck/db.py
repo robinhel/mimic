@@ -140,8 +140,16 @@ CREATE TABLE IF NOT EXISTS live_seen (
     trade_ts INTEGER NOT NULL,
     seen_ts INTEGER NOT NULL,
     late INTEGER NOT NULL,          -- upptäckt för sent (lucka 32), räknas separat
-    kalshi_ticker TEXT NOT NULL,
+    kalshi_ticker TEXT,             -- NULL utan Kalshi-matchning
     PRIMARY KEY (wallet, tx_hash, token_id)
+);
+CREATE TABLE IF NOT EXISTS pm_quotes (  -- Polymarkets orderbok när livetestet såg en affär
+    token_id TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    bid REAL,
+    ask REAL,
+    ask_size REAL,                  -- andelar till bästa pris
+    PRIMARY KEY (token_id, ts)
 );
 CREATE TABLE IF NOT EXISTS heartbeats (
     ts INTEGER NOT NULL,
@@ -186,6 +194,9 @@ def _migrate(conn):
 
     if cols("sim_trades") and "venue" not in cols("sim_trades"):
         conn.execute("DROP TABLE sim_trades")  # bara härledda rader, backtest bygger om dem
+    old = [r for r in conn.execute("PRAGMA table_info(live_seen)") if r[1] == "kalshi_ticker"]
+    if old and old[0][3]:  # kalshi_ticker var NOT NULL; livetestet sparar nu alla affärer
+        conn.execute("ALTER TABLE live_seen RENAME TO live_seen_v1")
     have = cols("pm_markets")
     for name, kind in (("fee_rate", "REAL"), ("closed_ts", "INTEGER")):
         if have and name not in have:
