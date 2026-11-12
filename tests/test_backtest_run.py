@@ -13,8 +13,8 @@ class KalshiClient:
 
     def get_json(self, url, params=None):
         self.calls.append((url, dict(params or {})))
-        if url.endswith("/prices-history"):  # Polymarket: ett mittpris 10 s före slutet
-            return {"history": [{"t": params["endTs"] - 10, "p": 0.42}]}
+        if url.endswith("/prices-history"):  # Polymarket: ett mittpris 10 s före signalen
+            return {"history": [{"t": params["startTs"] + DAY - 10, "p": 0.42}]}
         if url.endswith("/candlesticks"):
             t = params["start_ts"] + DAY
             c = {"end_period_ts": t - 10, "yes_bid": {"close_dollars": "0.40"},

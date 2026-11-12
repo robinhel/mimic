@@ -22,6 +22,7 @@ KALSHI_FALLBACK_URL = os.environ.get(
 )
 POLYMARKET_DATA_URL = os.environ.get("POLYMARKET_DATA_URL", "https://data-api.polymarket.com")
 POLYMARKET_GAMMA_URL = os.environ.get("POLYMARKET_GAMMA_URL", "https://gamma-api.polymarket.com")
+POLYMARKET_CLOB_URL = os.environ.get("POLYMARKET_CLOB_URL", "https://clob.polymarket.com")
 # AI för matchningen (fas 3). Alla har OpenAI-kompatibla API:er.
 # leverantör: (bas-URL, miljövariabel med nyckeln, standardmodell)
 LLM_PROVIDERS = {

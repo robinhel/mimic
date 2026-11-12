@@ -4,7 +4,7 @@ import json
 import re
 import sqlite3
 
-from copycheck import kalshi
+from copycheck import fees, kalshi
 from copycheck.polymarket import price
 
 SCHEMA = """
@@ -99,10 +99,13 @@ CREATE TABLE IF NOT EXISTS pm_markets (
     outcome0_token TEXT,
     outcome1_token TEXT,
     category TEXT,
-    slug TEXT
+    slug TEXT,
+    fee_rate REAL,                  -- Polymarkets taker-ränta, 0 utan avgift, NULL = ej hämtad
+    closed_ts INTEGER               -- när marknaden stängde (Gamma closedTime)
 );
 CREATE TABLE IF NOT EXISTS sim_trades (
     signal_id INTEGER NOT NULL,
+    venue TEXT NOT NULL,            -- polymarket eller kalshi
     strategy TEXT NOT NULL,
     delay INTEGER NOT NULL,
     kalshi_ticker TEXT,
@@ -119,8 +122,8 @@ CREATE TABLE IF NOT EXISTS sim_trades (
     pnl REAL,
     cost REAL,
     mismatch INTEGER,               -- PM och Kalshi avgjordes olika (lucka 28)
-    skip_reason TEXT,               -- no_match, short_market, no_price, price_ran, ...
-    PRIMARY KEY (signal_id, strategy, delay)
+    skip_reason TEXT,               -- no_match, no_market, closed, no_price, price_ran, ...
+    PRIMARY KEY (signal_id, venue, strategy, delay)
 );
 CREATE TABLE IF NOT EXISTS kalshi_quotes (
     ticker TEXT NOT NULL,
@@ -175,9 +178,24 @@ CREATE VIRTUAL TABLE IF NOT EXISTS kalshi_search USING fts5 (
 """
 
 
+def _migrate(conn):
+    """Ger en databas från en tidigare version de nya kolumnerna."""
+
+    def cols(table):
+        return {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+    if cols("sim_trades") and "venue" not in cols("sim_trades"):
+        conn.execute("DROP TABLE sim_trades")  # bara härledda rader, backtest bygger om dem
+    have = cols("pm_markets")
+    for name, kind in (("fee_rate", "REAL"), ("closed_ts", "INTEGER")):
+        if have and name not in have:
+            conn.execute(f"ALTER TABLE pm_markets ADD COLUMN {name} {kind}")
+
+
 def connect(path):
     conn = sqlite3.connect(path)
     conn.execute("PRAGMA journal_mode=WAL")
+    _migrate(conn)
     conn.executescript(SCHEMA)
     return conn
 
@@ -336,17 +354,21 @@ def upsert_pm_markets(conn, gamma_rows):
         prices = [float(x) for x in json.loads(m.get("outcomePrices") or "[]")]
         result = prices.index(1.0) if m.get("closed") and 1.0 in prices else None
         category = next((e.get("category") for e in m.get("events") or []), None)
+        fee_rate = 0.0
+        if m.get("feesEnabled"):
+            fee_rate = float((m.get("feeSchedule") or {}).get("rate", fees.PM_UNKNOWN_RATE))
         return (
             m["conditionId"], m.get("question"), m.get("description"),
             kalshi.iso_ts(m.get("endDate")), int(bool(m.get("closed"))), result,
             json.dumps(outcomes), tokens[0], tokens[1], category, m.get("slug"),
+            fee_rate, kalshi.iso_ts(m.get("closedTime")),
         )  # fmt: skip
 
     conn.executemany(
         """INSERT OR REPLACE INTO pm_markets
            (condition_id, question, description, end_ts, closed, result_index, outcomes,
-            outcome0_token, outcome1_token, category, slug)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            outcome0_token, outcome1_token, category, slug, fee_rate, closed_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [row(m) for m in gamma_rows],
     )
     conn.commit()

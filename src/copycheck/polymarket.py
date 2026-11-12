@@ -55,3 +55,10 @@ def gamma_markets(client, condition_ids, batch=50):
             params = {"condition_ids": ids, "closed": closed, "limit": len(ids)}
             out.extend(client.get_json(config.POLYMARKET_GAMMA_URL + "/markets", params) or [])
     return out
+
+
+def prices_history(client, token, start, end):
+    """Mittpris ungefär en gång per minut: [{"t": unix, "p": pris}]. Provat 2026-11-12."""
+    params = {"market": token, "startTs": start, "endTs": end, "fidelity": 1}
+    body = client.get_json(config.POLYMARKET_CLOB_URL + "/prices-history", params)
+    return body.get("history") or []

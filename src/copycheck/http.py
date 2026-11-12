@@ -13,6 +13,7 @@ DEFAULT_MIN_INTERVAL = {
     "external-api.kalshi.com": 0.2,
     "api.elections.kalshi.com": 0.2,
     "data-api.polymarket.com": 0.1,  # gräns okänd, var snälla
+    "clob.polymarket.com": 0.1,
 }
 RETRY_STATUS = {429, 500, 502, 503, 504}
 MAX_BACKOFF = 60.0

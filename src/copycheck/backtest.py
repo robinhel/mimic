@@ -6,13 +6,14 @@ from decimal import Decimal
 
 import requests
 
-from copycheck import kalshi
-from copycheck.fees import fee
+from copycheck import db, kalshi, polymarket
+from copycheck.fees import fee, pm_fee
 from copycheck.matching import kalshi_side
 
 DELAYS = [0, 30, 120, 600]  # 0 = jämförelse utan fördröjning (lucka 30)
 STRATEGIES = ["A", "B", "A_cap"]  # A håll, B sälj med tradern, A_cap hoppa över om priset sprungit
-SHORT_MARKET = 3600  # lucka 39
+# Ingen spärr för korta marknader (lucka 39): Gammas slutdatum är matchstart för sport, och
+# spärren hoppade över alla köp under pågående match. Bottar tas bort av botfiltret.
 
 
 @dataclass(frozen=True)
@@ -50,16 +51,69 @@ def quote_at(candles, ts):
     }
 
 
-def _skip(s, strategy, delay, reason):
-    return {"signal_id": s["signal_id"], "strategy": strategy, "delay": delay,
-            "kalshi_ticker": s["kalshi_ticker"], "skip_reason": reason}  # fmt: skip
+def pm_quote_at(history, ts):
+    """(bid, ask, ålder) från Polymarkets prishistorik. Historiken har bara mittpris,
+    så bid = ask = senaste mittpris före `ts`. Slippage står för halva spreaden."""
+    i = bisect_right([h["t"] for h in history], ts)
+    if i == 0:
+        return None
+    p = polymarket.price(history[i - 1]["p"])
+    return p, p, ts - history[i - 1]["t"]
+
+
+def _skip(s, strategy, delay, reason, venue="kalshi"):
+    return {"signal_id": s["signal_id"], "venue": venue, "strategy": strategy, "delay": delay,
+            "kalshi_ticker": s.get("kalshi_ticker") if venue == "kalshi" else None,
+            "skip_reason": reason}  # fmt: skip
+
+
+def simulate_pm(s, history, sells, delay, strategy, cfg, open_price=None):
+    """Samma köp som tradern, på Polymarket, `delay` sekunder efter signalen."""
+    if s["fee_rate"] is None:
+        return _skip(s, strategy, delay, "no_market", "polymarket")  # saknas i Gamma
+    entry_ts = s["trigger_ts"] + delay
+    if s.get("pm_closed_ts") and entry_ts >= s["pm_closed_ts"]:
+        return _skip(s, strategy, delay, "closed", "polymarket")
+    q = pm_quote_at(history, entry_ts)
+    if q is None:
+        return _skip(s, strategy, delay, "no_price", "polymarket")
+    price = q[1] + cfg.slippage
+    if not 0 < price < 1:
+        return _skip(s, strategy, delay, "no_price", "polymarket")
+    if strategy == "A_cap" and price - Decimal(str(s["avg_price"])) > cfg.max_gap:
+        return _skip(s, strategy, delay, "price_ran", "polymarket")
+    contracts = int(cfg.amount / price)
+    if contracts == 0:
+        return _skip(s, strategy, delay, "too_expensive", "polymarket")
+    fee_in, fee_out = pm_fee(contracts, price, s["fee_rate"]), Decimal(0)
+
+    exit_kind, exit_price = None, None
+    if strategy == "B" and sells:
+        q2 = pm_quote_at(history, sells[0] + delay)
+        if q2:
+            exit_kind, exit_price = "sold", max(q2[0] - cfg.slippage, Decimal(0))
+            fee_out = pm_fee(contracts, exit_price, s["fee_rate"])
+    if exit_kind is None:
+        if s["pm_result_index"] is not None:
+            exit_kind = "settled"
+            exit_price = Decimal(int(s["pm_result_index"] == s["outcome_index"]))
+        else:
+            exit_kind, exit_price = "open", open_price
+    if exit_price is None:
+        return _skip(s, strategy, delay, "no_exit_price", "polymarket")
+    return {
+        "signal_id": s["signal_id"], "venue": "polymarket", "strategy": strategy,
+        "delay": delay, "kalshi_ticker": None, "side": None, "entry_ts": entry_ts,
+        "entry_price": price, "quote_age": q[2], "stale": int(q[2] > cfg.stale_after),
+        "contracts": contracts, "fee_in": fee_in, "exit_kind": exit_kind,
+        "exit_price": exit_price, "fee_out": fee_out,
+        "pnl": contracts * (exit_price - price) - fee_in - fee_out,
+        "cost": contracts * price + fee_in, "mismatch": None, "skip_reason": None,
+    }  # fmt: skip
 
 
 def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
     """En kopierad affär. `sells` = traderns säljtider för samma token efter signalen."""
-    # Planerat slut, känt när signalen kommer. Kalshis faktiska close_ts vore framåtblick.
-    if s["pm_end_ts"] and s["pm_end_ts"] - s["trigger_ts"] < SHORT_MARKET:
-        return _skip(s, strategy, delay, "short_market")
     side = kalshi_side(s["outcome_index"], s["outcome0_side"])
     entry_ts = s["trigger_ts"] + delay
     if s.get("kalshi_close_ts") and entry_ts >= s["kalshi_close_ts"]:
@@ -97,7 +151,7 @@ def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
         pm_won = s["pm_result_index"] == s["outcome_index"]
         mismatch = int(pm_won != (s["kalshi_result"] == side))
     return {
-        "signal_id": s["signal_id"], "strategy": strategy, "delay": delay,
+        "signal_id": s["signal_id"], "venue": "kalshi", "strategy": strategy, "delay": delay,
         "kalshi_ticker": s["kalshi_ticker"], "side": side, "entry_ts": entry_ts,
         "entry_price": price, "quote_age": q["age"], "stale": int(q["age"] > cfg.stale_after),
         "contracts": contracts, "fee_in": fee_in, "exit_kind": exit_kind,
@@ -109,8 +163,8 @@ def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
 
 TEST_SIGNALS = """
 SELECT s.id, s.wallet, s.token_id, s.trigger_ts, s.avg_price, s.outcome_index,
-       p.end_ts, p.result_index, p.category, mm.kalshi_ticker, m.outcome0_side, k.result,
-       k.close_ts
+       p.end_ts, p.result_index, p.category, p.fee_rate, p.closed_ts,
+       mm.kalshi_ticker, m.outcome0_side, k.result, k.close_ts
 FROM signals s
 LEFT JOIN pm_markets p ON p.condition_id = s.condition_id
 LEFT JOIN (SELECT pm_condition, MIN(kalshi_ticker) AS kalshi_ticker FROM matches
@@ -121,8 +175,9 @@ LEFT JOIN kalshi_markets k ON k.ticker = mm.kalshi_ticker
 WHERE s.wallet IN ({wallets}) AND s.trigger_ts >= ? AND s.trigger_ts < ?
 ORDER BY s.id
 """
-COLUMNS = ["signal_id", "strategy", "delay", "kalshi_ticker", "side", "entry_ts", "entry_price",
-           "quote_age", "stale", "contracts", "fee_in", "exit_kind", "exit_price", "fee_out",
+COLUMNS = ["signal_id", "venue", "strategy", "delay", "kalshi_ticker", "side", "entry_ts",
+           "entry_price", "quote_age", "stale", "contracts", "fee_in", "exit_kind", "exit_price",
+           "fee_out",
            "pnl", "cost", "mismatch", "skip_reason"]  # fmt: skip
 CANDLE_LOOKBACK = 86400  # pris äldre än ett dygn räknas som saknat
 
@@ -149,6 +204,19 @@ def open_bid(client, base, ticker, side):
     return kalshi.bid_for(side, yes_bid, yes_ask)
 
 
+def _merged(rows, key):
+    return sorted({r[key]: r for r in rows}.values(), key=lambda r: r[key])
+
+
+def pm_history(client, token, around):
+    """Prishistorik runt varje tidpunkt i `around`, ihopslagen."""
+    rows = []
+    for ts in around:
+        rows += polymarket.prices_history(client, token, ts - CANDLE_LOOKBACK,
+                                          ts + max(DELAYS) + 60)  # fmt: skip
+    return _merged(rows, "t")
+
+
 def first_sell(conn, wallet, token, after, before):
     return conn.execute(
         """SELECT MIN(trade_ts) FROM pm_activity
@@ -162,20 +230,48 @@ def _db_row(r):
 
 
 def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=print):
+    """Simulerar varje signal på Polymarket och, där en matchning finns, på Kalshi."""
     traders = select_traders(conn, train_start, train_end, top=top)
     log(f"{len(traders)} traders valda på träningsperioden")
     wallets = [t[0] for t in traders]
-    sql = TEST_SIGNALS.format(wallets=",".join("?" * len(wallets)) or "NULL")
-    rows = conn.execute(sql, (*wallets, train_end, test_end)).fetchall()
+    marks = ",".join("?" * len(wallets)) or "NULL"
+    period = (*wallets, train_end, test_end)
+    todo = [c for (c,) in conn.execute(
+        f"""SELECT DISTINCT s.condition_id FROM signals s
+            LEFT JOIN pm_markets p ON p.condition_id = s.condition_id
+            WHERE s.wallet IN ({marks}) AND s.trigger_ts >= ? AND s.trigger_ts < ?
+            AND p.fee_rate IS NULL""", period,
+    )]  # fmt: skip
+    if todo:  # avgift och stängningstid saknas i äldre rader
+        db.upsert_pm_markets(conn, polymarket.gamma_markets(client, todo))
+        log(f"{len(todo)} PM-marknader hämtade från Gamma")
+    rows = conn.execute(TEST_SIGNALS.format(wallets=marks), period).fetchall()
     log(f"{len(rows)} signaler i testperioden")
     conn.execute("DELETE FROM sim_trades")
     out = []
     for i, r in enumerate(rows, 1):
-        sid, wallet, token, trigger, avg, idx, pm_end, pm_res, cat, ticker, side0, k_res, close = r
+        (sid, wallet, token, trigger, avg, idx, pm_end, pm_res, cat, fee_rate, pm_closed,
+         ticker, side0, k_res, close) = r  # fmt: skip
         s = {"signal_id": sid, "wallet": wallet, "trigger_ts": trigger, "avg_price": avg,
              "outcome_index": idx, "pm_end_ts": pm_end, "pm_result_index": pm_res,
              "kalshi_ticker": ticker, "outcome0_side": side0, "kalshi_result": k_res,
-             "category": cat, "kalshi_close_ts": close}  # fmt: skip
+             "category": cat, "kalshi_close_ts": close, "fee_rate": fee_rate,
+             "pm_closed_ts": pm_closed}  # fmt: skip
+
+        # Polymarket: samma token som tradern köpte, ingen matchning behövs.
+        sell = first_sell(conn, wallet, token, trigger, pm_closed)
+        hist, open_price = [], None
+        if fee_rate is not None:
+            hist = pm_history(client, token, [trigger] + ([sell] if sell else []))
+            if pm_res is None:  # öppen marknad värderas med senaste pris (lucka 27)
+                last = polymarket.prices_history(client, token, test_end - CANDLE_LOOKBACK,
+                                                 test_end)  # fmt: skip
+                open_price = polymarket.price(last[-1]["p"]) if last else None
+        for st in STRATEGIES:
+            for d in DELAYS:
+                out.append(simulate_pm(s, hist, [sell] if sell else [], d, st, cfg, open_price))
+
+        # Kalshi: bara där AI-matchningen hittade exakt samma fråga.
         if ticker is None or side0 is None:
             out += [_skip(s, st, d, "no_match") for st in STRATEGIES for d in DELAYS]
             continue
@@ -185,8 +281,7 @@ def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=p
         if sell:
             later = fetch_candles(client, base, ticker, sell - CANDLE_LOOKBACK,
                                   sell + max(DELAYS) + 60)  # fmt: skip
-            candles = sorted({c["end_period_ts"]: c for c in candles + later}.values(),
-                             key=lambda c: c["end_period_ts"])  # fmt: skip
+            candles = _merged(candles + later, "end_period_ts")
         side = kalshi_side(idx, side0)
         bid = open_bid(client, base, ticker, side) if k_res not in ("yes", "no") else None
         for st in STRATEGIES:
