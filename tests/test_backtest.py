@@ -66,18 +66,16 @@ def test_kort_marknad_hoppas_over():
     assert r["skip_reason"] == "short_market"
 
 
-def test_kort_marknad_raknas_fran_kalshis_stangning():
-    # Gammas slutdatum ligger ofta en vecka efter matchen. Kalshis close_ts är rätt.
-    s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 + 1800)
-    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] == (
-        "short_market"
-    )
-    # Signal efter att Kalshi stängt: får inte köpas till sista priset före stängningen.
-    s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 - 60)
-    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] == (
-        "short_market"
-    )
-    s = sig(pm_end_ts=1000 + 1800, kalshi_close_ts=1000 + 86400)
+def test_stangd_kalshi_marknad_kops_inte():
+    # Fördröjningen kan landa efter stängningen. Då går det inte att köpa.
+    s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 + 60)
+    assert backtest.simulate(s, flat("0.4", "0.44"), [], 30, "A", CFG)["skip_reason"] is None
+    assert backtest.simulate(s, flat("0.4", "0.44"), [], 120, "A", CFG)["skip_reason"] == "closed"
+
+
+def test_kort_marknad_anvander_planerat_slut_inte_faktisk_stangning():
+    # Faktisk stängning är okänd när signalen kommer. Att använda den vore att se framåt.
+    s = sig(pm_end_ts=1000 + 86400, kalshi_close_ts=1000 + 1800)
     assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] is None
 
 
