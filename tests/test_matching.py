@@ -50,6 +50,17 @@ def test_pm_market_sparar_resultat_och_tokens():
     assert row[0] == json.loads(closed["outcomePrices"]).index("1")
     assert row[1] == json.loads(closed["clobTokenIds"])[0]
     assert row[2] > 0
+    fee_rate, closed_ts = conn.execute(
+        "SELECT fee_rate, closed_ts FROM pm_markets WHERE condition_id = ?",
+        (closed["conditionId"],),
+    ).fetchone()
+    assert fee_rate == closed["feeSchedule"]["rate"]
+    assert closed_ts == kalshi.iso_ts(closed["closedTime"])
+    free = {**closed, "conditionId": "gratis", "feesEnabled": False}
+    db.upsert_pm_markets(conn, [free])
+    assert conn.execute(
+        "SELECT fee_rate FROM pm_markets WHERE condition_id = 'gratis'"
+    ).fetchone() == (0,)
     still_open = next(m for m in GAMMA if not m["closed"])
     assert conn.execute(
         "SELECT result_index FROM pm_markets WHERE condition_id = ?", (still_open["conditionId"],)

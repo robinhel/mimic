@@ -19,7 +19,14 @@
         "slug": "nba-2027-champion",
         "category": null
       }
-    ]
+    ],
+    "feesEnabled": true,
+    "feeSchedule": {
+      "exponent": 1,
+      "rate": 0.03,
+      "takerOnly": true,
+      "rebateRate": 0.25
+    }
   },
   {
     "conditionId": "0x9b786700f51dc9540f016267a69245616f53e93563de3fc5a1ac3a16f66310c4",
@@ -41,7 +48,14 @@
         "slug": "jensen-huang-divorce-in-2026",
         "category": null
       }
-    ]
+    ],
+    "feesEnabled": true,
+    "feeSchedule": {
+      "exponent": 1,
+      "rate": 0.04,
+      "takerOnly": true,
+      "rebateRate": 0.25
+    }
   },
   {
     "conditionId": "0x0256ef63427ed0d9eefa1422eee948165a2a215b0741a339025fb08b2cf6e15d",
@@ -63,7 +77,15 @@
         "slug": "fifwc-gha-pan-2026-06-17",
         "category": null
       }
-    ]
+    ],
+    "feesEnabled": true,
+    "feeSchedule": {
+      "exponent": 1,
+      "rate": 0.03,
+      "takerOnly": true,
+      "rebateRate": 0.25
+    },
+    "closedTime": "2026-06-18 01:24:04+00"
   },
   {
     "conditionId": "0x51166276fa646ca50165f7d030c297138ed1d62dc41f6ffde21e962c44182074",
@@ -85,6 +107,14 @@
         "slug": "fifwc-esp-arg-2026-07-19",
         "category": null
       }
-    ]
+    ],
+    "feesEnabled": true,
+    "feeSchedule": {
+      "exponent": 1,
+      "rate": 0.05,
+      "takerOnly": true,
+      "rebateRate": 0.15
+    },
+    "closedTime": "2026-07-19 22:52:57+00"
   }
 ]

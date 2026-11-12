@@ -13,6 +13,8 @@ class KalshiClient:
 
     def get_json(self, url, params=None):
         self.calls.append((url, dict(params or {})))
+        if url.endswith("/prices-history"):  # Polymarket: ett mittpris 10 s före slutet
+            return {"history": [{"t": params["endTs"] - 10, "p": 0.42}]}
         if url.endswith("/candlesticks"):
             t = params["start_ts"] + DAY
             c = {"end_period_ts": t - 10, "yes_bid": {"close_dollars": "0.40"},
@@ -43,8 +45,8 @@ def setup():
             (cid, cid + "tok", idx, ts, ts, ts),
         )
         conn.execute(
-            """INSERT INTO pm_markets (condition_id, question, end_ts, result_index, outcomes)
-               VALUES (?, 'q', ?, ?, '["Yes","No"]')""",
+            """INSERT INTO pm_markets (condition_id, question, end_ts, result_index, outcomes,
+                   fee_rate) VALUES (?, 'q', ?, ?, '["Yes","No"]', 0.05)""",
             (cid, ts + 10 * DAY, pm_result),
         )
         if ticker:
@@ -69,15 +71,19 @@ def test_run_skriver_en_rad_per_signal_strategi_och_fordrojning():
                  log=lambda *a: None)  # fmt: skip
     n = len(backtest.DELAYS) * len(backtest.STRATEGIES)
     rows = conn.execute(
-        "SELECT kalshi_ticker, skip_reason, exit_kind, COUNT(*) FROM sim_trades GROUP BY 1, 2, 3"
+        """SELECT venue, kalshi_ticker, skip_reason, exit_kind, COUNT(*) FROM sim_trades
+           GROUP BY 1, 2, 3, 4"""
     ).fetchall()
-    assert sorted(rows, key=str) == sorted(
-        [("K1", None, "settled", n), ("K2", None, "open", n), (None, "no_match", None, n)], key=str
-    )
+    # Polymarket simuleras för alla signaler, Kalshi bara där det finns en matchning.
+    assert sorted(rows, key=str) == sorted([
+        ("kalshi", "K1", None, "settled", n), ("kalshi", "K2", None, "open", n),
+        ("kalshi", None, "no_match", None, n),
+        ("polymarket", None, None, "settled", n), ("polymarket", None, None, "open", 2 * n),
+    ], key=str)  # fmt: skip
     # körs igen utan dubbletter
     backtest.run(conn, client, "https://k", *TRAIN, TEST_END, backtest.Config(), top=5,
                  log=lambda *a: None)  # fmt: skip
-    assert conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0] == 3 * n
+    assert conn.execute("SELECT COUNT(*) FROM sim_trades").fetchone()[0] == 6 * n
 
 
 def test_run_anvander_kalshis_stangningstid():

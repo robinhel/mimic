@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from pathlib import Path
 
 from copycheck import db
@@ -56,3 +57,22 @@ def test_senaste_affar():
     db.insert_activity(conn, rows, seen_ts=1)
     wallet = rows[0]["proxy_wallet"]
     assert db.last_trade_ts(conn, wallet) == max(r["timestamp"] for r in rows)
+
+
+def test_gammal_databas_far_nya_kolumner(tmp_path):
+    path = tmp_path / "gammal.db"
+    old = sqlite3.connect(path)
+    old.executescript(
+        """CREATE TABLE pm_markets (condition_id TEXT PRIMARY KEY, question TEXT);
+           INSERT INTO pm_markets VALUES ('c', 'q');
+           CREATE TABLE sim_trades (signal_id INTEGER, strategy TEXT, delay INTEGER);
+           INSERT INTO sim_trades VALUES (1, 'A', 0);"""
+    )
+    old.commit()
+    old.close()
+    conn = db.connect(str(path))
+    assert conn.execute("SELECT question, fee_rate, closed_ts FROM pm_markets").fetchall() == [
+        ("q", None, None)
+    ]
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(sim_trades)")]
+    assert "venue" in cols

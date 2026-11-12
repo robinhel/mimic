@@ -1,7 +1,7 @@
 from copycheck import db, report
 
 
-def setup(trades):
+def setup(trades, venue="kalshi"):
     """trades: (signal_id, delay, strategy, pnl, cost, skip_reason)"""
     conn = db.connect(":memory:")
     for sid in {t[0] for t in trades}:
@@ -18,10 +18,10 @@ def setup(trades):
         )
     for sid, delay, st, pnl, cost, skip in trades:
         conn.execute(
-            """INSERT INTO sim_trades (signal_id, strategy, delay, pnl, cost, entry_price, stale,
-                   exit_kind, mismatch, skip_reason)
-               VALUES (?, ?, ?, ?, ?, 0.52, 0, 'settled', 0, ?)""",
-            (sid, st, delay, pnl, cost, skip),
+            """INSERT INTO sim_trades (signal_id, venue, strategy, delay, pnl, cost, entry_price,
+                   stale, exit_kind, mismatch, skip_reason)
+               VALUES (?, ?, ?, ?, ?, ?, 0.52, 0, 'settled', 0, ?)""",
+            (sid, venue, st, delay, pnl, cost, skip),
         )
     return conn
 
@@ -32,7 +32,7 @@ def test_roi_tackning_och_slippage():
     )
     rows = report.summary(conn, by="wallet")
     r = next(x for x in rows if x["group"] == "w" and x["delay"] == 0 and x["strategy"] == "A")
-    assert r["signals"] == 3 and r["trades"] == 2
+    assert r["venue"] == "kalshi" and r["signals"] == 3 and r["trades"] == 2
     assert round(r["coverage"], 3) == round(2 / 3, 3)
     assert r["roi"] == -5 / 20
     assert round(r["slippage"], 4) == 0.02
@@ -63,3 +63,11 @@ def test_markdown_innehaller_tabeller():
     text = report.render(conn, now=1794311314)
     assert "| delay |" in text.lower() or "| fördröjning |" in text.lower()
     assert "Beslut" in text
+
+
+def test_svaret_galler_polymarket_och_salj_med_tradern():
+    # Robins flöde: köp när notisen kommer, sälj när tradern säljer (strategi B).
+    trades = [(i, 120, "B", 1, 10, None) for i in range(1, 4)] + [(9, 120, "A", -5, 10, None)]
+    text = report.render(setup(trades, venue="polymarket"), 0)
+    svar = text.split("## Svar")[1].split("##")[0]
+    assert "Polymarket" in svar and "+10.0%" in svar

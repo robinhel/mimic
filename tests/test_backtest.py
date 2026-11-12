@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from copycheck import backtest, db
+from copycheck import backtest, db, polymarket
 
 FIXTURES = Path(__file__).parent / "fixtures"
 D = Decimal
@@ -61,9 +61,10 @@ def test_no_sidan_anvander_ett_minus_yes_bid():
     assert r["exit_price"] == 0
 
 
-def test_kort_marknad_hoppas_over():
-    r = backtest.simulate(sig(pm_end_ts=1000 + 1800), flat("0.4", "0.44"), [], 0, "A", CFG)
-    assert r["skip_reason"] == "short_market"
+def test_kop_under_pagaende_match_raknas():
+    # Gammas slutdatum är matchstart för sport. 35 % av signalerna kom efter det.
+    r = backtest.simulate(sig(pm_end_ts=1000 - 1800), flat("0.4", "0.44"), [], 0, "A", CFG)
+    assert r["skip_reason"] is None and r["venue"] == "kalshi"
 
 
 def test_stangd_kalshi_marknad_kops_inte():
@@ -71,12 +72,6 @@ def test_stangd_kalshi_marknad_kops_inte():
     s = sig(pm_end_ts=1000 + 7 * 86400, kalshi_close_ts=1000 + 60)
     assert backtest.simulate(s, flat("0.4", "0.44"), [], 30, "A", CFG)["skip_reason"] is None
     assert backtest.simulate(s, flat("0.4", "0.44"), [], 120, "A", CFG)["skip_reason"] == "closed"
-
-
-def test_kort_marknad_anvander_planerat_slut_inte_faktisk_stangning():
-    # Faktisk stängning är okänd när signalen kommer. Att använda den vore att se framåt.
-    s = sig(pm_end_ts=1000 + 86400, kalshi_close_ts=1000 + 1800)
-    assert backtest.simulate(s, flat("0.4", "0.44"), [], 0, "A", CFG)["skip_reason"] is None
 
 
 def test_gammalt_pris_markeras_stale():
@@ -112,6 +107,59 @@ def test_oppen_marknad_varderas_med_bid():
 def test_olika_avgorande_flaggas():
     r = backtest.simulate(sig(kalshi_result="no"), flat("0.40", "0.44"), [], 0, "A", CFG)
     assert r["mismatch"] == 1
+
+
+HISTORY = json.loads((FIXTURES / "pm_prices_history.json").read_text())["history"]
+
+
+def pm_hist(*points):
+    return [{"t": t, "p": p} for t, p in points]
+
+
+def pm_sig(**kw):
+    return sig(**{"fee_rate": 0.05, "pm_closed_ts": None, **kw})
+
+
+def test_pm_pris_ar_senaste_mittpris_avrundat():
+    h = HISTORY
+    p = polymarket.price(h[3]["p"])
+    assert backtest.pm_quote_at(h, h[3]["t"] + 20) == (p, p, 20)
+    assert backtest.pm_quote_at(h, h[0]["t"] - 1) is None
+    assert backtest.pm_quote_at(pm_hist((990, 0.4000001785)), 1000)[0] == D("0.4")
+
+
+def test_pm_kop_och_hall_till_avgorande():
+    r = backtest.simulate_pm(pm_sig(), pm_hist((990, 0.4000001785)), [], 0, "A", CFG)
+    # mittpris 0.40 + 1 cent = 0.41, 24 andelar, avgift 24 * 0.05 * 0.41 * 0.59 = 0.29028
+    assert (r["venue"], r["entry_price"], r["contracts"], r["fee_in"]) == (
+        "polymarket",
+        D("0.41"),
+        24,
+        D("0.29028"),
+    )
+    assert r["exit_kind"] == "settled" and r["exit_price"] == 1
+    assert r["pnl"] == 24 * (1 - D("0.41")) - D("0.29028")
+    lost = backtest.simulate_pm(pm_sig(outcome_index=1), pm_hist((990, 0.4)), [], 0, "A", CFG)
+    assert lost["exit_price"] == 0
+
+
+def test_pm_strategi_b_saljer_nar_tradern_saljer():
+    h = pm_hist((990, 0.40), (5000, 0.60))
+    r = backtest.simulate_pm(pm_sig(), h, sells=[5100], delay=30, strategy="B", cfg=CFG)
+    assert r["exit_kind"] == "sold" and r["exit_price"] == D("0.59")  # mittpris - slippage
+    assert r["fee_out"] == D("0.29028")  # 24 * 0.05 * 0.59 * 0.41
+
+
+def test_pm_stangd_saknad_och_oppen_marknad():
+    h = pm_hist((990, 0.40))
+    s = pm_sig(pm_closed_ts=1000 + 60)
+    assert backtest.simulate_pm(s, h, [], 30, "A", CFG)["skip_reason"] is None
+    assert backtest.simulate_pm(s, h, [], 120, "A", CFG)["skip_reason"] == "closed"
+    s = pm_sig(fee_rate=None)  # marknaden finns inte i Gamma
+    assert backtest.simulate_pm(s, h, [], 0, "A", CFG)["skip_reason"] == "no_market"
+    s = pm_sig(pm_result_index=None)
+    r = backtest.simulate_pm(s, h, [], 0, "A", CFG, open_price=D("0.55"))
+    assert r["exit_kind"] == "open" and r["exit_price"] == D("0.55")
 
 
 def test_valj_traders_pa_traningsperioden():
