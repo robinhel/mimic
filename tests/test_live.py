@@ -2,10 +2,13 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from copycheck import db, kalshi, live
+import requests
+
+from copycheck import db, kalshi, live, polymarket
 
 FIXTURES = Path(__file__).parent / "fixtures"
 BOOK = json.loads((FIXTURES / "kalshi_orderbook.json").read_text())
+PM_BOOK = json.loads((FIXTURES / "pm_book.json").read_text())  # riktig, Gen.G Worlds 2026-11-12
 NOW = 1_800_000_000
 
 
@@ -21,6 +24,7 @@ class Client:
     def __init__(self, fills):
         self.fills = fills
         self.calls = []
+        self.book_error = False
 
     def get_json(self, url, params=None):
         self.calls.append((url, dict(params or {})))
@@ -28,6 +32,10 @@ class Client:
             return {"data": self.fills, "pagination": {"next_cursor": None}}
         if url.endswith("/orderbook"):
             return BOOK
+        if url.endswith("/book"):
+            if self.book_error:
+                raise requests.HTTPError("404 No orderbook exists")
+            return PM_BOOK
         raise AssertionError(url)
 
 
@@ -70,6 +78,7 @@ def test_samma_affar_tva_ganger_ger_en_orderbok():
     live.tick(conn, client, "https://k", ["w"], now=NOW)
     live.tick(conn, client, "https://k", ["w"], now=NOW + 30)
     assert sum(u.endswith("/orderbook") for u, _ in client.calls) == 1
+    assert sum(u.endswith("/book") for u, _ in client.calls) == 1
 
 
 def test_omatchad_eller_salj_ger_ingen_orderbok():
@@ -90,3 +99,37 @@ def test_fel_skrivs_i_heartbeat():
     live.tick(conn, Broken(), "https://k", ["w"], now=NOW)
     status = conn.execute("SELECT status FROM heartbeats").fetchone()[0]
     assert status.startswith("error") and "nere" in status
+
+
+def test_polymarket_basta_bud_och_utbud():
+    # Buden står stigande och utbudet fallande, så bästa priset ligger sist i båda listorna.
+    assert polymarket.best_bid_ask(PM_BOOK) == (
+        Decimal("0.62"),
+        Decimal("0.63"),
+        Decimal("207524.61"),
+    )
+    assert polymarket.best_bid_ask({"bids": [], "asks": []}) == (None, None, None)
+
+
+def test_tick_sparar_polymarket_orderbok_for_kop_och_salj():
+    # Robins flöde: köp när tradern köper, sälj när tradern säljer. Båda behöver priset.
+    conn = setup()
+    fills = [fill(NOW - 20, token="a", i=1), fill(NOW - 20, token="b", side="SELL", i=2)]
+    fills[0]["condition_id"] = "c9"  # ingen Kalshi-matchning, ska ändå sparas
+    live.tick(conn, Client(fills), "https://k", ["w"], now=NOW)
+    rows = conn.execute(
+        "SELECT token_id, ts, bid, ask, ask_size FROM pm_quotes ORDER BY 1"
+    ).fetchall()
+    assert rows == [("a", NOW, 0.62, 0.63, 207524.61), ("b", NOW, 0.62, 0.63, 207524.61)]
+    seen = conn.execute("SELECT token_id, kalshi_ticker FROM live_seen ORDER BY 1").fetchall()
+    assert seen == [("a", None), ("b", None)]
+
+
+def test_saknad_polymarket_orderbok_stoppar_inte_rundan():
+    conn = setup()
+    client = Client([fill(NOW - 20)])
+    client.book_error = True  # stängd marknad: 404 "No orderbook exists"
+    live.tick(conn, client, "https://k", ["w"], now=NOW)
+    assert conn.execute("SELECT COUNT(*) FROM live_seen").fetchone() == (1,)
+    assert conn.execute("SELECT COUNT(*) FROM pm_quotes").fetchone() == (0,)
+    assert conn.execute("SELECT status FROM heartbeats").fetchone() == ("ok",)

@@ -76,3 +76,18 @@ def test_gammal_databas_far_nya_kolumner(tmp_path):
     ]
     cols = [r[1] for r in conn.execute("PRAGMA table_info(sim_trades)")]
     assert "venue" in cols
+
+
+def test_gammal_live_seen_tillater_rader_utan_kalshi(tmp_path):
+    path = tmp_path / "gammal.db"
+    old = sqlite3.connect(path)
+    old.execute(
+        """CREATE TABLE live_seen (wallet TEXT NOT NULL, tx_hash TEXT NOT NULL,
+               token_id TEXT NOT NULL, trade_ts INTEGER NOT NULL, seen_ts INTEGER NOT NULL,
+               late INTEGER NOT NULL, kalshi_ticker TEXT NOT NULL,
+               PRIMARY KEY (wallet, tx_hash, token_id))"""
+    )
+    old.commit()
+    old.close()
+    conn = db.connect(str(path))
+    conn.execute("INSERT INTO live_seen VALUES ('w', 'x', 't', 1, 2, 0, NULL)")
