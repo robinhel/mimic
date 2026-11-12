@@ -57,8 +57,13 @@ def tick(conn, client, base, wallets, now):
     """En runda. Fel stoppar inte tjänsten, de skrivs i heartbeats."""
     try:
         books, pm_books = set(), set()
+        # Orben pausar i timmar. Börja vid senaste rundan, så hämtas affärer under pausen
+        # också. De markeras late, eftersom vi inte såg dem i tid.
+        last_round = conn.execute(
+            "SELECT MAX(ts) FROM heartbeats WHERE component = 'live'"
+        ).fetchone()[0]
         for wallet in wallets:
-            start = db.last_trade_ts(conn, wallet) or now - 3600
+            start = db.last_trade_ts(conn, wallet) or last_round or now - 3600
             rows, _ = polymarket.activity(client, wallet, start, max_pages=5)
             db.insert_activity(conn, rows, seen_ts=now)
             for r in rows:
