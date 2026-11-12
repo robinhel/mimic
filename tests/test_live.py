@@ -148,3 +148,14 @@ def test_statussida_visar_senaste_heartbeat_och_antal(tmp_path):
         server.shutdown()
     assert "senaste runda: 2027-01-15 08:00:00 UTC ok" in text
     assert "affärer sedda: 1" in text and "orderböcker Polymarket: 1" in text
+
+
+def test_efter_paus_hamtas_affarer_sedan_senaste_rundan():
+    # Orben pausar i timmar. Affärer under pausen ska hämtas och markeras sena.
+    conn = setup()
+    live.heartbeat(conn, NOW - 7 * 3600, "ok")
+    client = Client([fill(NOW - 5 * 3600)])
+    live.tick(conn, client, "https://k", ["w"], now=NOW)
+    starts = [p["start"] for u, p in client.calls if u.endswith("/activity")]
+    assert starts == [NOW - 7 * 3600]
+    assert conn.execute("SELECT late FROM live_seen").fetchone() == (1,)
