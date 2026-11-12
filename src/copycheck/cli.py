@@ -195,6 +195,7 @@ def main(argv=None) -> None:
     lv.add_argument("--top", type=int, default=config.TOP_TRADERS)
     lv.add_argument("--wallets", nargs="*", help="plånböcker, annars de bästa på 90 dagar")
     lv.add_argument("--backup", default="backups/copycheck-latest.db")
+    lv.add_argument("--port", type=int, help="visa en statussida på den här porten")
     args = p.parse_args(argv)
 
     if args.cmd == "collect":
@@ -240,6 +241,8 @@ def main(argv=None) -> None:
     elif args.cmd == "live":
         logging.basicConfig(level=logging.INFO)
         conn = db.connect(args.db)
+        if args.port:
+            live.serve_status(args.db, args.port)
         now = int(time.time())
         wallets = args.wallets or [
             w for w, *_ in backtest.select_traders(

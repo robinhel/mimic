@@ -1,0 +1,7 @@
+# Livetestet på en Amp Box, alltid på. Se deploy/box-build.sh och deploy/box-live.sh.
+build: sh deploy/box-build.sh
+source: false
+artifacts: [py, vendor, src, deploy/box-live.sh]
+services:
+  live:
+    command: sh deploy/box-live.sh

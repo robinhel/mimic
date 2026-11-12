@@ -5,8 +5,10 @@ Kalshi: orderboken när ett köp har en exakt matchning."""
 
 import logging
 import sqlite3
+import threading
 import time
 from datetime import UTC, datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import requests
@@ -108,3 +110,39 @@ def loop(conn, client, base, wallets, backup_path, interval=INTERVAL):
             backup(conn, backup_path)
             last_day = day
         time.sleep(max(0, interval - (time.time() - now)))
+
+
+STATUS = """SELECT (SELECT ts FROM heartbeats ORDER BY ts DESC LIMIT 1),
+                  (SELECT status FROM heartbeats ORDER BY ts DESC LIMIT 1),
+                  (SELECT COUNT(*) FROM live_seen), (SELECT COUNT(*) FROM live_seen WHERE late),
+                  (SELECT COUNT(*) FROM pm_quotes)"""
+
+
+def status_text(path):
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
+    try:
+        ts, status, seen, late, books = conn.execute(STATUS).fetchone()
+    finally:
+        conn.close()
+    when = "-" if ts is None else f"{datetime.fromtimestamp(ts, UTC):%Y-%m-%d %H:%M:%S} UTC"
+    return (f"copycheck livetest (pappershandel)\nsenaste runda: {when} {status or ''}\n"
+            f"affärer sedda: {seen} (sena: {late})\norderböcker Polymarket: {books}\n")  # fmt: skip
+
+
+def serve_status(path, port):
+    """Statussida på `port` i en egen tråd. En Box-tjänst måste svara på $PORT."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = status_text(path).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
