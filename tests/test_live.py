@@ -133,3 +133,18 @@ def test_saknad_polymarket_orderbok_stoppar_inte_rundan():
     assert conn.execute("SELECT COUNT(*) FROM live_seen").fetchone() == (1,)
     assert conn.execute("SELECT COUNT(*) FROM pm_quotes").fetchone() == (0,)
     assert conn.execute("SELECT status FROM heartbeats").fetchone() == ("ok",)
+
+
+def test_statussida_visar_senaste_heartbeat_och_antal(tmp_path):
+    # En Box-tjänst måste svara på $PORT. Sidan visar också om livetestet lever.
+    path = str(tmp_path / "live.db")
+    conn = db.connect(path)
+    live.tick(conn, Client([fill(NOW - 20)]), "https://k", ["w"], now=NOW)
+    server = live.serve_status(path, port=0)
+    try:
+        url = f"http://127.0.0.1:{server.server_address[1]}/"
+        text = requests.get(url, timeout=5).text
+    finally:
+        server.shutdown()
+    assert "senaste runda: 2027-01-15 08:00:00 UTC ok" in text
+    assert "affärer sedda: 1" in text and "orderböcker Polymarket: 1" in text
