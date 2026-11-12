@@ -270,6 +270,8 @@ def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=p
         for st in STRATEGIES:
             for d in DELAYS:
                 out.append(simulate_pm(s, hist, [sell] if sell else [], d, st, cfg, open_price))
+        if i % 100 == 0:
+            log(f"{i}/{len(rows)} signaler simulerade")
 
         # Kalshi: bara där AI-matchningen hittade exakt samma fråga.
         if ticker is None or side0 is None:
@@ -287,8 +289,6 @@ def run(conn, client, base, train_start, train_end, test_end, cfg, top=20, log=p
         for st in STRATEGIES:
             for d in DELAYS:
                 out.append(simulate(s, candles, [sell] if sell else [], d, st, cfg, bid))
-        if i % 50 == 0:
-            log(f"{i}/{len(rows)} signaler simulerade")
     conn.executemany(
         f"INSERT INTO sim_trades ({', '.join(COLUMNS)}) VALUES ({', '.join('?' * len(COLUMNS))})",
         [_db_row(r) for r in out],
