@@ -190,7 +190,7 @@ def main(argv=None) -> None:
     rp = sub.add_parser("report", help="skriv rapporten som markdown")
     rp.add_argument("--db", default=config.DB_PATH)
     rp.add_argument("--out", help="fil att skriva till, annars skärmen")
-    lv = sub.add_parser("live", help="livetest: följ valda traders var 30:e sekund")
+    lv = sub.add_parser("live", help="livetest: pappershandel som en riktig bot")
     lv.add_argument("--db", default=config.DB_PATH)
     lv.add_argument("--top", type=int, default=config.TOP_TRADERS)
     lv.add_argument("--wallets", nargs="*", help="plånböcker, annars de bästa på 90 dagar")

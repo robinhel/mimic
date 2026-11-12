@@ -1,6 +1,6 @@
 """Polymarket Data API. Bara v2: cursor-paginering, svar i `data`, snake_case."""
 
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 from copycheck import config
 
@@ -67,6 +67,37 @@ def prices_history(client, token, start, end):
 def book(client, token):
     """Orderboken för en token. 404 när marknaden saknar orderbok (stängd)."""
     return client.get_json(config.POLYMARKET_CLOB_URL + "/book", {"token_id": token})
+
+
+SHARE = Decimal("0.01")
+
+
+def fill_buy(book, usd):
+    """Marknadsköp för `usd` dollar: billigaste utbudet först, nivå för nivå.
+    [(pris, andelar)], andelar avrundade nedåt till hundradelar."""
+    out = []
+    asks = sorted((Decimal(a["price"]), Decimal(a["size"])) for a in book.get("asks") or [])
+    for p, size in asks:
+        n = min(size, usd / p).quantize(SHARE, ROUND_DOWN)
+        if n <= 0:
+            break
+        out.append((p, n))
+        usd -= p * n
+    return out
+
+
+def fill_sell(book, shares):
+    """Marknadsförsäljning av `shares` andelar: högsta budet först. [(pris, andelar)]."""
+    out = []
+    bids = sorted(((Decimal(b["price"]), Decimal(b["size"])) for b in book.get("bids") or []),
+                  reverse=True)  # fmt: skip
+    for p, size in bids:
+        if shares <= 0:
+            break
+        n = min(size, shares)
+        out.append((p, n))
+        shares -= n
+    return out
 
 
 def best_bid_ask(book):

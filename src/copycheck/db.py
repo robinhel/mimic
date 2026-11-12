@@ -151,6 +151,27 @@ CREATE TABLE IF NOT EXISTS pm_quotes (  -- Polymarkets orderbok när livetestet 
     ask_size REAL,                  -- andelar till bästa pris
     PRIMARY KEY (token_id, ts)
 );
+CREATE TABLE IF NOT EXISTS paper_trades (  -- livetestets låtsaskonto, en rad per signal
+    wallet TEXT NOT NULL,
+    token_id TEXT NOT NULL,
+    signal_ts INTEGER NOT NULL,     -- traderns första köp i signalen
+    condition_id TEXT,
+    trigger_ts INTEGER NOT NULL,    -- när traderns köp passerade gränsen
+    trader_price REAL NOT NULL,     -- traderns snittpris
+    seen_ts INTEGER NOT NULL,       -- när vi såg köpet och tog orderboken
+    book_ts INTEGER,                -- orderbokens egen tid
+    status TEXT NOT NULL,           -- open, sold, settled, skipped
+    skip_reason TEXT,
+    shares REAL NOT NULL DEFAULT 0,
+    shares_left REAL NOT NULL DEFAULT 0,
+    entry_price REAL,
+    fee_in REAL NOT NULL DEFAULT 0,
+    cost REAL NOT NULL DEFAULT 0,   -- andelar * pris + avgift
+    trader_exit_ts INTEGER,         -- när tradern sålde
+    exit_ts INTEGER,
+    proceeds REAL NOT NULL DEFAULT 0,  -- efter avgift
+    PRIMARY KEY (wallet, token_id, signal_ts)
+);
 CREATE TABLE IF NOT EXISTS heartbeats (
     ts INTEGER NOT NULL,
     component TEXT NOT NULL,
