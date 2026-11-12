@@ -7,11 +7,14 @@ from statistics import mean
 from zoneinfo import ZoneInfo
 
 MIN_TRADES = 200  # lucka 29
-HEADLINE = (120, "A")  # 2 minuters fördröjning, håll till avgörande
+# Robins flöde: köp på Polymarket 2 minuter efter notisen, sälj när tradern säljer.
+HEADLINE = ("polymarket", 120, "B")
+COMPARE = ("kalshi", 120, "B")
+VENUES = {"polymarket": "Polymarket", "kalshi": "Kalshi"}
 
 ROWS = """
 SELECT s.id, s.wallet, COALESCE(p.category, 'okänd'), t.delay, t.strategy, t.pnl, t.cost,
-       t.entry_price, s.avg_price, t.stale, t.exit_kind, t.mismatch, t.skip_reason
+       t.entry_price, s.avg_price, t.stale, t.exit_kind, t.mismatch, t.skip_reason, t.venue
 FROM sim_trades t
 JOIN signals s ON s.id = t.signal_id
 LEFT JOIN pm_markets p ON p.condition_id = s.condition_id
@@ -34,18 +37,19 @@ def bootstrap_ci(pnl, cost, n=1000, seed=0):
 
 
 def summary(conn, by):
-    """by: wallet, category eller all. En rad per (grupp, fördröjning, strategi)."""
+    """by: wallet, category eller all. En rad per (börs, grupp, fördröjning, strategi)."""
     groups = defaultdict(list)
     for r in conn.execute(ROWS):
         key = {"wallet": r[1], "category": r[2], "all": "alla"}[by]
-        groups[(key, r[3], r[4])].append(r)
+        groups[(r[13], key, r[3], r[4])].append(r)
     out = []
-    for (group, delay, strategy), rows in sorted(groups.items()):
+    for (venue, group, delay, strategy), rows in sorted(groups.items()):
         trades = [r for r in rows if r[12] is None]
         pnl, cost = [r[5] for r in trades], [r[6] for r in trades]
         lo, hi = bootstrap_ci(pnl, cost)
         out.append({
-            "group": group, "delay": delay, "strategy": strategy, "signals": len(rows),
+            "venue": venue, "group": group, "delay": delay, "strategy": strategy,
+            "signals": len(rows),
             "trades": len(trades),
             "coverage": sum(r[12] != "no_match" for r in rows) / len(rows),
             "roi": sum(pnl) / sum(cost) if sum(cost) else None, "ci": (lo, hi),
@@ -90,14 +94,15 @@ def _pct(x):
 def _table(rows, label, names=None):
     names = names or {}
     lines = [
-        f"| {label} | fördröjning | strategi | signaler | affärer | täckning | ROI "
+        f"| börs | {label} | fördröjning | strategi | signaler | affärer | täckning | ROI "
         "| 95 % intervall | slippage | gamla priser | öppna | olika avgörande |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in rows:
         lo, hi = r["ci"]
         slip = "-" if r["slippage"] is None else f"{r['slippage'] * 100:+.1f} ¢"
         lines.append(
+            f"| {VENUES.get(r['venue'], r['venue'])} "
             f"| {names.get(r['group'], r['group'])} | {r['delay']} s | {r['strategy']} "
             f"| {r['signals']} | {r['trades']} | {r['coverage']:.0%} | {_pct(r['roi'])} "
             f"| {_pct(lo)} till {_pct(hi)} | {slip} | {r['stale']} | {r['open']} "
@@ -109,17 +114,24 @@ def _table(rows, label, names=None):
 def render(conn, now):
     names = dict(conn.execute("SELECT wallet, COALESCE(name, wallet) FROM traders"))
     total = summary(conn, "all")
-    head = next((r for r in total if (r["delay"], r["strategy"]) == HEADLINE), None)
+    pick = {(r["venue"], r["delay"], r["strategy"]): r for r in total}
+    head, comp = pick.get(HEADLINE), pick.get(COMPARE)
     when = datetime.fromtimestamp(now, UTC).astimezone(ZoneInfo("Europe/Stockholm"))
     parts = [f"# copycheck: resultat\n\nSkapad {when:%Y-%m-%d %H:%M} svensk tid.\n"]
     if head:
         lo, hi = head["ci"]
-        parts.append(
-            "## Svar\n\nHade du kopierat de valda traders med 2 minuters fördröjning, och hållit "
-            f"till avgörande, hade du gått {_pct(head['roi'])} efter avgifter "
-            f"({head['trades']} affärer, 95 % intervall {_pct(lo)} till {_pct(hi)}).\n\n"
-            f"## Beslut\n\n{verdict(lo, hi, head['trades'])}\n"
+        text = (
+            "## Svar\n\nHade du kopierat de valda traders på Polymarket 2 minuter efter "
+            "notisen, och sålt när tradern sålde, hade du gått "
+            f"{_pct(head['roi'])} efter avgifter ({head['trades']} affärer, "
+            f"95 % intervall {_pct(lo)} till {_pct(hi)}).\n"
         )
+        if comp:
+            text += (
+                f"\nSamma sak på Kalshi: {_pct(comp['roi'])} ({comp['trades']} affärer, "
+                f"{comp['coverage']:.0%} av signalerna hade en matchning).\n"
+            )
+        parts.append(text + f"\n## Beslut\n\n{verdict(lo, hi, head['trades'])}\n")
     else:
         parts.append("## Beslut\n\nInga affärer att räkna på.\n")
     parts.append("## Alla traders\n\n" + _table(total, "grupp") + "\n")
