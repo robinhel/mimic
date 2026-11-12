@@ -57,13 +57,13 @@ def _skip(s, strategy, delay, reason):
 
 def simulate(s, candles, sells, delay, strategy, cfg, open_bid=None):
     """En kopierad affär. `sells` = traderns säljtider för samma token efter signalen."""
-    # Kalshis close_ts är rätt tid. Gammas slutdatum ligger ofta en vecka efter matchen.
-    # Signaler efter stängningen hamnar också här (negativ tid kvar).
-    end = s.get("kalshi_close_ts") or s["pm_end_ts"]
-    if end and end - s["trigger_ts"] < SHORT_MARKET:
+    # Planerat slut, känt när signalen kommer. Kalshis faktiska close_ts vore framåtblick.
+    if s["pm_end_ts"] and s["pm_end_ts"] - s["trigger_ts"] < SHORT_MARKET:
         return _skip(s, strategy, delay, "short_market")
     side = kalshi_side(s["outcome_index"], s["outcome0_side"])
     entry_ts = s["trigger_ts"] + delay
+    if s.get("kalshi_close_ts") and entry_ts >= s["kalshi_close_ts"]:
+        return _skip(s, strategy, delay, "closed")  # annars köp till sista priset före stängning
     q = quote_at(candles, entry_ts)
     if q is None or q["yes_bid"] is None or q["yes_ask"] is None:
         return _skip(s, strategy, delay, "no_price")
