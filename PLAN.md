@@ -163,7 +163,8 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 
 ### Fas 6 – Livetest (pappershandel)
 - Poller var 30:e sekund för de utvalda traders
-- Spara Kalshis orderbok i samma ögonblick som en signal upptäcks
+- Spara Polymarkets orderbok vid varje köp och sälj, och Kalshis vid matchade köp
+- Startat 2026-11-12 för tradern `0xc8b9a301…`, den enda med tydligt positivt backtest. Egen databas `live.db`.
 - Kör i 3–4 veckor och jämför med backtestets antaganden
 - **Klart när:** systemd-tjänsten har gått en vecka utan avbrott.
 
