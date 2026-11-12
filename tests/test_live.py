@@ -36,6 +36,8 @@ class Client:
             if self.book_error:
                 raise requests.HTTPError("404 No orderbook exists")
             return PM_BOOK
+        if url.endswith("/markets"):  # Gamma: inget nytt, raden i pm_markets gäller
+            return []
         raise AssertionError(url)
 
 
@@ -159,3 +161,92 @@ def test_efter_paus_hamtas_affarer_sedan_senaste_rundan():
     starts = [p["start"] for u, p in client.calls if u.endswith("/activity")]
     assert starts == [NOW - 7 * 3600]
     assert conn.execute("SELECT late FROM live_seen").fetchone() == (1,)
+
+
+# --- Pappershandel: gör som en riktig bot, i samma ögonblick som vi ser köpet ---
+
+MARKET = PM_BOOK["market"]
+
+
+def paper_setup(result_index=None):
+    conn = setup()
+    conn.execute(
+        """INSERT INTO pm_markets (condition_id, closed, result_index, outcome0_token,
+               outcome1_token, fee_rate) VALUES (?, ?, ?, 'tok', 'annan', 0.04)""",
+        (MARKET, int(result_index is not None), result_index),
+    )
+    return conn
+
+
+def buy(ts, price=0.62, usdc=300, i=1):
+    f = fill(ts, i=i)
+    f["price"], f["usdc_size"] = price, usdc
+    return f
+
+
+def paper(conn):
+    return conn.execute(
+        """SELECT status, skip_reason, shares, entry_price, cost, proceeds
+           FROM paper_trades"""
+    ).fetchall()
+
+
+def test_kop_gar_igenom_orderboken_niva_for_niva():
+    book = {"asks": [{"price": "0.6", "size": "100"}, {"price": "0.5", "size": "4"}]}
+    assert polymarket.fill_buy(book, Decimal(10)) == [
+        (Decimal("0.5"), Decimal("4")),
+        (Decimal("0.6"), Decimal("13.33")),  # 8 dollar kvar / 0.6, avrundat nedåt
+    ]
+
+
+def test_salj_tar_hogsta_budet_forst():
+    book = {"bids": [{"price": "0.4", "size": "5"}, {"price": "0.45", "size": "3"}]}
+    assert polymarket.fill_sell(book, Decimal(6)) == [
+        (Decimal("0.45"), Decimal("3")),
+        (Decimal("0.4"), Decimal("3")),
+    ]
+
+
+def test_kop_nar_traderns_kop_passerar_250_dollar():
+    # Samma regel som backtestet: under 250 dollar händer inget, sedan köper vi direkt.
+    conn = paper_setup()
+    client = Client([buy(NOW - 5, usdc=100, i=1)])
+    live.tick(conn, client, "https://k", ["w"], now=NOW)
+    assert paper(conn) == []
+    client.fills = [buy(NOW + 1, usdc=200, i=2)]
+    live.tick(conn, client, "https://k", ["w"], now=NOW + 3)
+    # 10 dollar / 0.63 = 15.87 andelar. Avgift 0.04 * 15.87 * 0.63 * 0.37 = 0.14797.
+    assert paper(conn) == [("open", None, 15.87, 0.63, 10.14607, 0.0)]
+    assert live.cash(conn) == Decimal("989.85393")
+
+
+def test_salj_mot_buden_nar_tradern_saljer():
+    conn = paper_setup()
+    client = Client([buy(NOW - 5)])
+    live.tick(conn, client, "https://k", ["w"], now=NOW)
+    client.fills = [fill(NOW + 60, side="SELL", i=9)]
+    live.tick(conn, client, "https://k", ["w"], now=NOW + 62)
+    # 15.87 * 0.62 = 9.8394, minus avgift 0.04 * 15.87 * 0.62 * 0.38 = 0.14956.
+    assert paper(conn) == [("sold", None, 15.87, 0.63, 10.14607, 9.68984)]
+
+
+def test_avgjord_marknad_betalar_ut():
+    conn = paper_setup()
+    live.tick(conn, Client([buy(NOW - 5)]), "https://k", ["w"], now=NOW)
+    conn.execute("UPDATE pm_markets SET closed = 1, result_index = 0")  # 'tok' vann
+    live.settle(conn, Client([]), now=NOW + 3600)
+    assert paper(conn)[0][0] == "settled"
+    assert paper(conn)[0][5] == 15.87
+
+
+def test_kop_som_inte_gar_att_gora_hoppas_over_med_skal():
+    cases = [
+        (buy(NOW - 600), "late"),  # vi såg köpet för sent
+        (buy(NOW - 5, price=0.5), "price_ran"),  # priset har stigit mer än 5 cent
+        (buy(NOW - 5, price=0.05), "longshot"),  # under 10 cent
+    ]
+    for f, reason in cases:
+        conn = paper_setup()
+        live.tick(conn, Client([f]), "https://k", ["w"], now=NOW)
+        assert [r[:2] for r in paper(conn)] == [("skipped", reason)], reason
+        assert live.cash(conn) == live.START_CASH
