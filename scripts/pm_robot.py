@@ -94,6 +94,9 @@ class Robot:
         self.state_path = self.d / "state.json"
         if self.state_path.exists():
             self.s = json.loads(self.state_path.read_text())
+            if bank != self.s["bank"]:  # ny insättning: kassan växer lika mycket som startkassan
+                self.s["cash"] += bank - self.s["bank"]
+                self.s["bank"] = bank
         else:  # börja vid slutet av events.jsonl: gamla signaler är för gamla
             ev = self.live / "events.jsonl"
             self.s = {"bank": bank, "cash": bank, "pos": {}, "offset": ev.stat().st_size,

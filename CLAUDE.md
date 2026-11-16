@@ -7,7 +7,7 @@ Läs `PLAN.md` först. Bygg **en fas i taget**, i ordning. Gå inte vidare förr
 - **Bara läsning.** Ingen kod som lägger order eller loggar in på Kalshi eller Polymarket.
   - Undantag (Robins beslut 2026-11-16): `scripts/pm_robot.py` får lägga order på Polymarket,
     bara med `--live`, bara från en plånbok med Robins 1000 kr och med robotens tak (5 $ per köp,
-    90 $ totalt, STOP-filen). Ingen annan kod får lägga order.
+    ca 100 $ totalt, STOP-filen). Ingen annan kod får lägga order.
 - **Polymarket Data API: bara v2** (`https://data-api.polymarket.com/v2/...`). v1 är nedlagt sedan 2026-10-24.
   - Paginering med `cursor` (följ `pagination.next_cursor`). Skicka aldrig `offset` eller `market`.
   - Svaren ligger i `data` och har snake_case.
