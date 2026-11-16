@@ -50,8 +50,19 @@ def jl(path, obj):
         f.write(json.dumps(obj) + "\n")
 
 
+def parse_jl(line):
+    """En rad ur en .jsonl-fil, eller None. Efter ett strömavbrott kan raden vara nollbyte."""
+    try:
+        return json.loads(line.strip("\0").strip())
+    except ValueError:
+        return None
+
+
 def read_jl(path):
-    return [json.loads(x) for x in open(path)] if path.exists() else []
+    if not path.exists():
+        return []
+    with open(path, errors="replace") as f:
+        return [o for o in map(parse_jl, f) if o is not None]
 
 
 def fee(shares, p, on):

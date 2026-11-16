@@ -29,7 +29,17 @@ from copycheck import polymarket
 from copycheck.http import HttpClient
 
 sys.path.insert(0, str(Path(__file__).parent))
-from pm_livetest import BOOK, SHORT, buy_fill, fee, jl, levels, sell_fill  # noqa: E402
+from pm_livetest import (  # noqa: E402
+    BOOK,
+    SHORT,
+    buy_fill,
+    fee,
+    jl,
+    levels,
+    parse_jl,
+    read_jl,
+    sell_fill,
+)
 
 MIN_SHARES, MAX_USD, SHARE, MAX_OPEN, RESERVE, MAX_SLIP = 5, 5.0, 0.02, 40, 0.20, 0.05
 MAX_AGE, SETTLE_EVERY = 900, 600
@@ -219,8 +229,10 @@ class Robot:
                 f.seek(self.s["offset"])
                 chunk = f.read()
             end = chunk.rfind(b"\n") + 1  # bara hela rader
-            for line in chunk[:end].splitlines():
-                e, now = json.loads(line), int(time.time())
+            for line in chunk[:end].decode(errors="replace").splitlines():
+                e, now = parse_jl(line), int(time.time())
+                if e is None:  # trasig rad efter ett strömavbrott
+                    continue
                 try:
                     if e["type"] == "signal":
                         self.on_signal(e, now)
@@ -242,7 +254,7 @@ class Robot:
 def report(d):
     d = Path(d)
     s = json.loads((d / "state.json").read_text())
-    ev = [json.loads(x) for x in open(d / "robot.jsonl")] if (d / "robot.jsonl").exists() else []
+    ev = read_jl(d / "robot.jsonl")
     n = {k: sum(e["type"] == k for e in ev) for k in ("buy", "sell", "settled", "skip", "error")}
     held = sum(p["cost"] for p in s["pos"].values())
     print(f"Kassa {s['cash']:.2f} $ av {s['bank']:.2f} $. Öppna köp: {len(s['pos'])} "
