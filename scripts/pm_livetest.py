@@ -43,6 +43,8 @@ EXCHANGES = [
 ]
 FILL = "0xd543adfd945773f1a62f74f0ee55a5e3b9b1a28262980ba90b1a89f2ea84d8ee"
 API_PER_ROUND = 4  # spelare per varv mot Data API, som reserv för det kedjan missar
+# Brett läge (fler än BIG spelare): bara kedjan, ingen databas, mindre på disk och i minnet.
+BIG, BIG_LEVELS, PRUNE_EVERY = 500, 10, 3600
 
 
 def jl(path, obj):
@@ -113,10 +115,22 @@ class Live:
             (e["wallet"], e["token"]) for e in read_jl(self.events_path) if e["type"] == "signal"
         }
         self.markets, self.pending = {}, []
+        self.big, self.pruned = len(self.players) > BIG, time.time()
+        self.wallet_set = set(self.players)
         self.seed(db)
 
     def seed(self, db):
         """Spelarnas innehav från databasen, sedan affärer från fills.jsonl och det som saknas."""
+        if self.big:  # bara framåt: inget innehav från förr, bara det fills.jsonl har sparat
+            now = int(time.time())
+            self.last = dict.fromkeys(self.players, now)
+            for f in read_jl(self.fills_path):
+                if f.get("kind") == "hold":
+                    self.hold[(f["wallet"], f["token"])] = f["size"]
+                else:
+                    self.apply(f, live=False)
+            print(f"brett läge: {len(self.players)} spelare, bara kedjan", flush=True)
+            return
         ph = ",".join("?" * len(self.players))
         conn = sqlite3.connect(f"file:{db}?immutable=1", uri=True)
         for w, tok, n in conn.execute(
@@ -203,13 +217,17 @@ class Live:
         if head <= self.block:
             return
         to = min(head, self.block + 500)
-        wallets = ["0x" + "0" * 24 + w[2:] for w in self.players]
+        if self.big:  # för många plånböcker för ett filter i noden: filtrera här
+            to = min(head, self.block + 100)
+        wallets = None if self.big else ["0x" + "0" * 24 + w[2:] for w in self.players]
         try:
             q = {"fromBlock": hex(self.block + 1), "toBlock": hex(to)}
             q |= {"address": EXCHANGES, "topics": [FILL, None, wallets]}
             logs = self.call("eth_getLogs", [q])
         except RuntimeError:  # noderna hos leverantören ligger ibland ett block efter
             return
+        if self.big:
+            logs = [lg for lg in logs if "0x" + lg["topics"][2][-40:] in self.wallet_set]
         agg = {}
         for lg in logs:
             x = [int(lg["data"][2 + 64 * i : 66 + 64 * i], 16) for i in range(4)]
@@ -244,8 +262,11 @@ class Live:
                 "title": info[2],
                 "src": "chain",
             }
-            jl(self.fills_path, f)
+            if not self.big:
+                jl(self.fills_path, f)
             self.apply(f, live=now - f["ts"] <= 900)
+            if self.big and (w, token) in self.open:  # bara affärer vi härmar sparas
+                jl(self.fills_path, f)
         self.block = to
 
     @staticmethod
@@ -254,8 +275,9 @@ class Live:
 
     def apply(self, f, live):
         k = (f["wallet"], f["token"])
-        self.seen.add(self.key(f))
-        self.txsrc.setdefault((f["tx"], f["token"], f["side"]), f.get("src", "api"))
+        if not self.big:  # dubbletter mellan kedjan och Data API finns bara i vanligt läge
+            self.seen.add(self.key(f))
+            self.txsrc.setdefault((f["tx"], f["token"], f["side"]), f.get("src", "api"))
         self.last[f["wallet"]] = max(self.last.get(f["wallet"], 0), f["ts"])
         if f["side"] == "BUY":
             self.hold[k] += f["size"]
@@ -304,7 +326,9 @@ class Live:
     def book(self, token):
         try:
             b = self.http.get_json(BOOK, {"token_id": token})
-            return {"t": int(time.time()), "asks": levels(b, "asks"), "bids": levels(b, "bids")}
+            n = BIG_LEVELS if self.big else None
+            asks, bids = levels(b, "asks")[:n], levels(b, "bids")[:n]
+            return {"t": int(time.time()), "asks": asks, "bids": bids}
         except Exception as e:  # en bok som saknas ska inte stoppa testet
             return {"t": int(time.time()), "error": str(e)}
 
@@ -319,6 +343,9 @@ class Live:
         m = self.market(f["cid"])
         sid = f"{f['wallet'][:10]}-{f['token'][-10:]}-{f['ts']}"
         self.open.add((f["wallet"], f["token"]))
+        if self.big:  # innehavet före signalen, så att försäljningar räknas rätt efter omstart
+            jl(self.fills_path, {"kind": "hold", "wallet": f["wallet"], "token": f["token"],
+                                 "size": self.hold[(f["wallet"], f["token"])]})  # fmt: skip
         self.event(
             {
                 "type": "signal",
@@ -341,11 +368,29 @@ class Live:
             }
         )
         now = int(time.time())
-        self.pending += [(now + d, d, sid, f["token"]) for d in SNAP_DELAYS]
+        if not self.big:
+            self.pending += [(now + d, d, sid, f["token"]) for d in SNAP_DELAYS]
 
     def event(self, e):
         jl(self.events_path, e)
-        print(json.dumps({k: v for k, v in e.items() if k != "book"}), flush=True)
+        if not self.big:
+            print(json.dumps({k: v for k, v in e.items() if k != "book"}), flush=True)
+
+    def prune(self):
+        """Brett läge: glöm det som inte längre behövs, så att minnet räcker i veckor."""
+        now = time.time()
+        if not self.big or now - self.pruned < PRUNE_EVERY:
+            return
+        self.pruned = now
+        for k in [k for k, g in self.groups.items() if now - g["last"] > WINDOW]:
+            del self.groups[k]
+        for tok in list(self.triggers):
+            self.triggers[tok] = [x for x in self.triggers[tok] if now - x[0] <= CONSENSUS]
+            if not self.triggers[tok]:
+                del self.triggers[tok]
+        keep = {k for k in self.hold if k in self.open or k in self.groups}
+        self.hold = defaultdict(float, {k: v for k, v in self.hold.items() if k in keep and v > 0})
+        self.btime.clear()
 
     def run(self, poll):
         errors, order, i = 0, list(self.players), 0
@@ -356,7 +401,7 @@ class Live:
             except Exception as e:
                 errors += 1
                 print(f"fel i kedjan: {e}", flush=True)
-            for w in order[i : i + API_PER_ROUND]:
+            for w in [] if self.big else order[i : i + API_PER_ROUND]:
                 try:
                     self.poll(w, live=True)
                 except Exception as e:
@@ -370,6 +415,7 @@ class Live:
                     self.events_path,
                     {"type": "snap", "id": item[2], "after": item[1], "book": self.book(item[3])},
                 )
+            self.prune()
             took = time.time() - t0
             (self.d / "heartbeat.json").write_text(
                 json.dumps(
