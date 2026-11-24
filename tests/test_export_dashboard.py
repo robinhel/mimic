@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import requests
 
 from copycheck import db
 
@@ -178,3 +179,82 @@ def test_kontrollen_stoppar_innan_nagot_skrivs(tmp_path):
     with pytest.raises(SystemExit):
         ex.main([str(out), "--live", str(LIVE), "--robot", str(rob)], http=FakeGamma(), now=NOW)
     assert not out.exists() or not any(out.iterdir())
+
+
+ADDR = "0x" + "6" * 40  # påhittad, samma som proxy_wallet i fixturerna
+
+
+class FakeDataApi(FakeGamma):
+    """Data API v2 från fixturerna: två sidor aktivitet (cursor c2) och positioner."""
+
+    def __init__(self, fail=None):
+        self.calls, self.fail = [], fail
+
+    def get_json(self, url, params):
+        if "gamma" in url:
+            return super().get_json(url, params)
+        self.calls.append((url, dict(params)))
+        if self.fail:
+            raise self.fail
+        if url.endswith("/v2/activity"):
+            page = 2 if params.get("cursor") == "c2" else 1
+            return json.loads((FIX / f"pm_robot_activity_{page}.json").read_text())
+        assert url.endswith("/v2/positions")
+        return json.loads((FIX / "pm_robot_positions.json").read_text())
+
+
+def test_robot_api_mappning():
+    r = ex.build(live=LIVE, http=FakeDataApi(), now=NOW, robot_address=ADDR)["robot.json"]
+    # Köp 49840.31 + 49604.10, tillbaka sälj 955.63 + inlösen 66547.96 + 0 (förlorad sida).
+    assert (r["spent_usd"], r["back_usd"], r["open"]) == (99444.41, 67503.6, 2)
+    assert [e["type"] for e in r["events"]] == ["sell", "buy", "buy", "settled", "settled"]
+    sell = {"t": iso(1795480849), "type": "sell", "title": "Bengals vs. Commanders: O/U 52.5"}
+    assert r["events"][0] == {**sell, "usd": 955.63}
+    assert r["events"][1]["usd"] == 49604.1
+    assert [e["usd"] for e in r["events"][3:]] == [66547.96, 0.0]
+
+
+def test_robot_api_paginering_med_cursor():
+    api = FakeDataApi()
+    ex.build(live=LIVE, http=api, now=NOW, robot_address=ADDR)
+    act = [p for u, p in api.calls if u.endswith("/activity")]
+    assert [p.get("cursor") for p in act] == [None, "c2"]
+    assert all(u.startswith("https://data-api.polymarket.com/v2/") for u, _ in api.calls)
+    for _, p in api.calls:
+        assert p["user"] == ADDR and "offset" not in p and "market" not in p
+
+
+def test_robot_api_adressen_syns_inte(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("POLYMARKET_WALLET_ADDRESS", ADDR)
+    ex.main([str(tmp_path), "--live", str(LIVE), "--robot-api"], http=FakeDataApi(), now=NOW)
+    files = {p.name: p.read_text() for p in tmp_path.iterdir()}
+    assert "robot.json" in files
+    assert not any(ADDR.lower() in t.lower() or "0x" in t for t in files.values())
+    out, err = capsys.readouterr()
+    assert ADDR not in out + err
+
+
+def test_robot_api_fel_visar_inte_adressen(tmp_path, monkeypatch):
+    monkeypatch.setenv("POLYMARKET_WALLET_ADDRESS", ADDR)
+    fail = requests.HTTPError(f"500 Server Error for url: /v2/activity?user={ADDR}")
+    with pytest.raises(SystemExit) as e:
+        ex.main(
+            [str(tmp_path), "--live", str(LIVE), "--robot-api"], http=FakeDataApi(fail), now=NOW
+        )
+    assert "Data API" in str(e.value) and ADDR not in str(e.value)
+    assert not any(tmp_path.iterdir())
+
+
+def test_robot_api_utan_adress_stoppar(tmp_path, monkeypatch):
+    monkeypatch.delenv("POLYMARKET_WALLET_ADDRESS", raising=False)
+    with pytest.raises(SystemExit, match="POLYMARKET_WALLET_ADDRESS saknas"):
+        ex.main([str(tmp_path), "--live", str(LIVE), "--robot-api"], http=FakeDataApi(), now=NOW)
+    assert not any(tmp_path.iterdir())
+
+
+def test_robot_och_robot_api_samtidigt_stoppar(tmp_path, monkeypatch):
+    monkeypatch.setenv("POLYMARKET_WALLET_ADDRESS", ADDR)
+    argv = [str(tmp_path), "--live", str(LIVE), "--robot", str(ROBOT), "--robot-api"]
+    with pytest.raises(SystemExit):
+        ex.main(argv, http=FakeDataApi(), now=NOW)
+    assert not any(tmp_path.iterdir())
