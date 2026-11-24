@@ -1,0 +1,7 @@
+[
+  { "name": "Kalshi backtest", "from": "2025-06-01", "to": "2026-09-30", "buys": 81384, "settled": 81384, "roi_pct": -11.4, "roi_fee_pct": -13.0 },
+  { "name": "test2", "from": "2026-10-05", "to": "2026-10-09", "buys": 18, "settled": 9, "roi_pct": -4.8, "roi_fee_pct": -6.2 },
+  { "name": "test8", "from": "2026-10-20", "to": "2026-10-27", "buys": 26, "settled": 12, "roi_pct": -1.1, "roi_fee_pct": -2.3 },
+  { "name": "test12", "from": "2026-11-04", "to": "2026-11-11", "buys": 31, "settled": 14, "roi_pct": 1.7, "roi_fee_pct": 0.8 },
+  { "name": "test15", "from": "2026-11-16", "to": "2026-11-23", "buys": 35, "settled": 11, "roi_pct": 3.6, "roi_fee_pct": 3.1 }
+]

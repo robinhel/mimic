@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-11-24T08:00:00Z",
+  "sample": true,
+  "sim_trades": 81384,
+  "kalshi_roi_pct": -13.0,
+  "live_roi_pct": 3.6,
+  "live_roi_fee_pct": 3.1,
+  "live_buys": 35,
+  "live_settled": 11,
+  "players": 29,
+  "players_trusted": 8
+}
