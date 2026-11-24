@@ -119,21 +119,53 @@ def test_robot():
     assert r["events"][1]["usd"] is None
 
 
+def test_robot_med_torrkorning_stoppar(tmp_path):
+    rob = tmp_path / "robot"
+    rob.mkdir()
+    lines = (ROBOT / "robot.jsonl").read_text().replace('"dry": false', '"dry": true', 1)
+    (rob / "robot.jsonl").write_text(lines)
+    with pytest.raises(ValueError, match="dry-run events; export only a --live robot dir"):
+        ex.robot_file(rob)
+    out = tmp_path / "out"
+    with pytest.raises(SystemExit, match="dry-run"):
+        ex.main([str(out), "--live", str(LIVE), "--robot", str(rob)], http=FakeGamma(), now=NOW)
+    assert not out.exists()
+
+
 def test_ingen_robot_json_utan_robot(tmp_path):
+    (tmp_path / "robot.json").write_text("{}")  # kvar från en tidigare export
     ex.main([str(tmp_path), "--live", str(LIVE)], http=FakeGamma(), now=NOW)
     names = sorted(p.name for p in tmp_path.iterdir())
     assert names == ["equity.json", "latency.json", "runs.json", "summary.json", "traders.json"]
     assert json.loads((tmp_path / "runs.json").read_text()) == []
 
 
+def test_run_utan_signaler_hoppas_over(tmp_path):
+    out = build(runs=[("Tom", tmp_path), ("Livetest 1", LIVE)])
+    assert [r["name"] for r in out["runs.json"]] == ["Livetest 1"]
+
+
+def test_live_run_namn():
+    assert build()["summary.json"]["live_run"] == "dashboard_live"
+    out = build(runs=[("Livetest 1", Path(str(LIVE) + "/"))])
+    assert out["summary.json"]["live_run"] == "Livetest 1"
+
+
 def test_kontrollen_hittar_forbjudet():
-    with pytest.raises(ValueError, match="0x"):
+    with pytest.raises(ValueError, match=r"a\.json, fält \[0\]\.title: .*0x"):
         ex.check({"a.json": [{"title": "köpt av 0x1234abcd5678"}]})
-    with pytest.raises(ValueError, match="wallet"):
-        ex.check({"a.json": {"x": [{"wallet": "w"}]}})
+    with pytest.raises(ValueError, match=r"b\.json, fält x\[0\]\.wallet: .*wallet"):
+        ex.check({"a.json": {}, "b.json": {"x": [{"wallet": "w"}]}})
     with pytest.raises(ValueError, match="PRIVATE_KEY"):
         ex.check({"a.json": {"text": "POLYMARKET_PRIVATE_KEY saknas"}})
     ex.check(build(robot=ROBOT))
+
+
+def test_exempeldatan_klarar_kontrollen():
+    data = Path(__file__).parents[1] / "dashboard" / "public" / "data"
+    files = {p.name: json.loads(p.read_text()) for p in sorted(data.glob("*.json"))}
+    assert "summary.json" in files
+    ex.check(files)
 
 
 def test_kontrollen_stoppar_innan_nagot_skrivs(tmp_path):
