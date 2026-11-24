@@ -428,19 +428,19 @@ class Live:
 # ---------------------------------------------------------------- rapport
 
 
-def report(d):
-    d = Path(d)
-    ev = read_jl(d / "events.jsonl")
+def outcomes(d, http=None):
+    """(signaler, lot). lot(s, label, fees_on) ger (resultat, kostnad, avgjord) för 10 $ köpt
+    direkt (label 0) eller efter label sekunder, eller None. Slutpriser från Gamma."""
+    ev = read_jl(Path(d) / "events.jsonl")
     sigs = [e for e in ev if e["type"] == "signal"]
     if not sigs:
-        print("Inga signaler än.")
-        return
+        return [], None
     snaps = {(e["id"], e["after"]): e["book"] for e in ev if e["type"] == "snap"}
     sells = defaultdict(list)
     for e in ev:
         if e["type"] == "sell":
             sells[(e["wallet"], e["token"])].append(e)
-    http = HttpClient()
+    http = http or HttpClient()
     final = {}
     cids = sorted({s["cid"] for s in sigs})
     for m in polymarket.gamma_markets(http, cids):
@@ -470,6 +470,15 @@ def report(d):
             return None
         return got + sh * prices[s["idx"]] - cost, cost, closed
 
+    return sigs, lot
+
+
+def report(d):
+    d = Path(d)
+    sigs, lot = outcomes(d)
+    if not sigs:
+        print("Inga signaler än.")
+        return
     out = [
         f"# Livetest Polymarket\n\n{len(sigs)} signaler. Skapad "
         f"{time.strftime('%Y-%m-%d %H:%M', time.localtime())}.\n"
