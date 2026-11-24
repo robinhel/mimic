@@ -4,8 +4,10 @@
         [--db copycheck.db] [--robot ROBOTDIR]
 
 --live: senaste livetestet (summary, equity, traders, latency). --run: en rad per testkörning
-i runs.json. --db: antal sim_trades och Kalshi-backtestens ROI. --robot: en kopia av robotens
-mapp (robot.jsonl, gärna state.json); utan --robot skrivs ingen robot.json.
+i runs.json (mappar utan signaler hoppas över); live_run i summary är namnet på den --run som
+har samma mapp som --live, annars mappens namn. --db: antal sim_trades och Kalshi-backtestens
+ROI. --robot: en kopia av robotens mapp (robot.jsonl, gärna state.json) där roboten bara körts
+med --live; torrkörda händelser stoppar exporten. Utan --robot tas en gammal robot.json bort.
 Räknar som pm_livetest.py report: 10 $ per köp direkt, utan marknader som slutar inom en timme.
 Innan något skrivs letar programmet efter plånböcker, nycklar och hemligheter och stoppar.
 """
@@ -117,10 +119,12 @@ def live_files(d, http):
 
 
 def run_row(name, d, http):
+    """Rad för runs.json, eller None om mappen saknar signaler."""
     sigs, res = results(d, http)
     ts = [s["trade_ts"] for s in sigs]
-    return {"name": name, "from": day(min(ts)) if ts else None,
-            "to": day(max(ts)) if ts else None, **totals(res)}  # fmt: skip
+    if not ts:
+        return None
+    return {"name": name, "from": day(min(ts)), "to": day(max(ts)), **totals(res)}
 
 
 def kalshi(path):
@@ -148,7 +152,10 @@ def kalshi(path):
 
 def robot_file(d):
     d = Path(d)
-    ev = [e for e in read_jl(d / "robot.jsonl") if e.get("type") in ROBOT_TYPES]
+    ev = read_jl(d / "robot.jsonl")
+    if any(e.get("dry") is True for e in ev):
+        raise ValueError("robot.jsonl contains dry-run events; export only a --live robot dir")
+    ev = [e for e in ev if e.get("type") in ROBOT_TYPES]
     state = d / "state.json"
     buys = sum(e["type"] == "buy" for e in ev)
     settled = sum(e["type"] == "settled" for e in ev)
@@ -168,17 +175,19 @@ def robot_file(d):
 
 def build(live, http=None, now=None, runs=(), db_path=None, robot=None):
     summary, equity, traders, latency = live_files(live, http)
-    rows = [run_row(name, d, http) for name, d in runs]
+    rows = [r for name, d in runs if (r := run_row(name, d, http))]
+    live_run = next((name for name, d in runs if Path(d).resolve() == Path(live).resolve()), None)
     sim_trades, kalshi_roi = 0, None
     if db_path:
         sim_trades, row = kalshi(db_path)
         if row:
             rows.append(row)
             kalshi_roi = row["roi_fee_pct"]
-    rows.sort(key=lambda r: (r["from"] or "", r["to"] or ""))
+    rows.sort(key=lambda r: (r["from"], r["to"]))
     out = {
         "summary.json": {"generated_at": iso(now or time.time()), "sample": False,
-                         "sim_trades": sim_trades, "kalshi_roi_pct": kalshi_roi, **summary},
+                         "sim_trades": sim_trades, "kalshi_roi_pct": kalshi_roi,
+                         "live_run": live_run or Path(live).resolve().name, **summary},
         "runs.json": rows,
         "equity.json": equity,
         "traders.json": traders,
@@ -192,21 +201,23 @@ def build(live, http=None, now=None, runs=(), db_path=None, robot=None):
 def check(files):
     """ValueError om något förbjudet finns: nycklar, adresser eller namn på hemligheter."""
 
-    def walk(x, where):
+    def walk(x, name, field):
+        where = f"{name}, fält {field or '(roten)'}"
         if isinstance(x, dict):
             for k, v in x.items():
+                sub = f"{field}.{k}" if field else str(k)
                 if k in FORBIDDEN_KEYS or FORBIDDEN.search(str(k)):
-                    raise ValueError(f"{where}: förbjuden nyckel {k!r}")
-                walk(v, f"{where}.{k}")
+                    raise ValueError(f"{name}, fält {sub}: förbjuden nyckel {k!r}")
+                walk(v, name, sub)
         elif isinstance(x, list):
             for i, v in enumerate(x):
-                walk(v, f"{where}[{i}]")
+                walk(v, name, f"{field}[{i}]")
         elif isinstance(x, str) and (m := FORBIDDEN.search(x)):
             what = "0x-adress" if m.group().startswith("0x") else m.group()
             raise ValueError(f"{where}: förbjudet innehåll ({what})")
 
     for name, data in files.items():
-        walk(data, name)
+        walk(data, name, "")
 
 
 def main(argv=None, http=None, now=None):
@@ -223,8 +234,8 @@ def main(argv=None, http=None, now=None):
         if not sep:
             ap.error(f"--run ska vara NAME=DATADIR: {r}")
         runs.append((name, d))
-    files = build(a.live, http, now, runs, a.db, a.robot)
     try:
+        files = build(a.live, http, now, runs, a.db, a.robot)
         check(files)
     except ValueError as e:
         sys.exit(f"Stoppar, inget skrivet: {e}")
@@ -232,6 +243,8 @@ def main(argv=None, http=None, now=None):
     out.mkdir(parents=True, exist_ok=True)
     for name, data in files.items():
         (out / name).write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
+    if "robot.json" not in files:  # en gammal robot.json får inte bli kvar
+        (out / "robot.json").unlink(missing_ok=True)
     print(f"Skrev {len(files)} filer till {out}.")
 
 
