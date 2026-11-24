@@ -4,8 +4,11 @@
   "buckets": [
     { "label": "0–1 s", "count": 13 },
     { "label": "1–2 s", "count": 17 },
-    { "label": "2–3 s", "count": 3 },
-    { "label": "3–5 s", "count": 2 }
+    { "label": "2–5 s", "count": 5 },
+    { "label": "5–15 s", "count": 0 },
+    { "label": "15–60 s", "count": 0 },
+    { "label": "1–5 min", "count": 0 },
+    { "label": "> 5 min", "count": 0 }
   ],
   "price_diff_cent_median": 0.8
 }

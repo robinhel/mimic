@@ -14,6 +14,11 @@ export function usd(v: number | null | undefined, signed = false): string {
   return signed && v > 0 ? `+${s}` : s;
 }
 
+// Axis tick with a real minus sign: tick(-4, "$") gives "−$4".
+export function tick(v: number, pre = "", post = ""): string {
+  return `${v < 0 ? MINUS : ""}${pre}${Math.abs(v)}${post}`;
+}
+
 export function int(v: number): string {
   return v.toLocaleString("en-US");
 }

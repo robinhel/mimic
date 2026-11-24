@@ -1,20 +1,16 @@
-import { useState } from "react";
 import { pct, source, tone } from "../format";
 import type { Data } from "../types";
 import { Badge, Card } from "./ui";
 
 export default function Traders({ data }: { data: Data }) {
-  const [all, setAll] = useState(false);
-  const sorted = [...data.traders].sort((a, b) => b.copied - a.copied || b.settled - a.settled);
-  const active = sorted.filter((t) => t.copied > 0);
-  const rows = all ? sorted : active;
-  const trusted = data.traders.filter((t) => t.safe).length;
+  const rows = [...data.traders].sort((a, b) => b.copied - a.copied || b.settled - a.settled);
+  const s = data.summary;
 
   return (
     <div className="grid gap-4">
       <Card
         title="Traders followed"
-        sub={`${data.traders.length} traders, ${trusted} trusted. Trusted traders are copied on every buy; the others only when a second followed trader buys the same answer within 3 days.`}
+        sub={`${s.players} traders followed, ${s.players_trusted} trusted. The paper result counts every buy from all followed traders. The list shows the ${rows.length} traders with copied buys.`}
       >
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full text-sm">
@@ -29,8 +25,8 @@ export default function Traders({ data }: { data: Data }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {rows.map((t) => (
-                <tr key={t.name}>
+              {rows.map((t, i) => (
+                <tr key={`${i}-${t.name}`}>
                   <td className="py-2 pr-2">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="text-zinc-200">{t.name}</span>
@@ -50,16 +46,8 @@ export default function Traders({ data }: { data: Data }) {
             </tbody>
           </table>
         </div>
-        {active.length < sorted.length && (
-          <button
-            onClick={() => setAll(!all)}
-            className="mt-4 rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
-          >
-            {all ? "Show only copied traders" : `Show all ${sorted.length} (${sorted.length - active.length} with no copied buys)`}
-          </button>
-        )}
         <p className="mt-4 text-xs text-zinc-500">
-          Names are public Polymarket names or aliases. No wallet addresses are published. ROI is “—” until a copied buy has settled.
+          Names are public Polymarket names or aliases. No wallet addresses are published. ROI includes open buys, valued at today's market price.
           With a few settled buys per trader, single results swing a lot.
         </p>
       </Card>

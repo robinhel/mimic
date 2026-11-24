@@ -32,13 +32,13 @@ export default function Robot({ data }: { data: Data }) {
             </div>
             <Card title="Robot log" sub="Newest first. Times in UTC.">
               <ul className="divide-y divide-zinc-800">
-                {[...r.events].reverse().map((e) => (
-                  <li key={e.t + e.title} className="flex items-start gap-3 py-2.5">
+                {[...r.events].reverse().map((e, i) => (
+                  <li key={`${i}-${e.t}-${e.type}-${e.title}`} className="flex items-start gap-3 py-2.5">
                     <span className="w-14 shrink-0 pt-0.5">
                       <Badge tone={TYPE[e.type].tone}>{TYPE[e.type].label}</Badge>
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm text-zinc-200 [overflow-wrap:anywhere]">{e.title}</span>
+                      <span className="block text-sm text-zinc-200 [overflow-wrap:anywhere]">{e.title ?? "—"}</span>
                       <span className="num block text-xs text-zinc-500">{dateTime(e.t)}</span>
                     </span>
                     <span className={`num shrink-0 text-sm ${e.type === "buy" ? "text-zinc-300" : "text-emerald-400"}`}>

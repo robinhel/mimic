@@ -1,5 +1,5 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { dateRange, dateTime, day, int, pct, tone, usd } from "../format";
+import { dateRange, dateTime, day, int, pct, tick, tone, usd } from "../format";
 import type { Data } from "../types";
 import { Card } from "./ui";
 
@@ -14,7 +14,7 @@ export default function Results({ data }: { data: Data }) {
   const points = equity.map((p) => ({ x: Date.parse(p.t), y: p.pnl_usd }));
   const last = equity.at(-1)?.pnl_usd ?? 0;
   const low = Math.min(0, ...equity.map((p) => p.pnl_usd));
-  const live = runs.at(-1);
+  const live = runs.find((r) => r.name === summary.live_run);
   const bars = runs.map((r) => ({ name: r.name, v: r.roi_fee_pct ?? r.roi_pct ?? 0, run: r }));
   const DAY = 86400000;
   const ticks: number[] = [];
@@ -25,7 +25,7 @@ export default function Results({ data }: { data: Data }) {
     <div className="grid gap-4">
       <Card
         title="Paper portfolio, latest live run"
-        sub={`Cumulative result in USD, $10 per copied buy, after fees and slippage.${live ? ` ${live.name}, ${dateRange(live.from, live.to)}.` : ""}`}
+        sub={`Cumulative result in USD, $10 per copied buy from all followed traders, after fees and slippage.${summary.live_run ? ` ${summary.live_run}${live ? `, ${dateRange(live.from, live.to)}` : ""}.` : ""}`}
       >
         <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
           <span>
@@ -49,7 +49,7 @@ export default function Results({ data }: { data: Data }) {
               </defs>
               <CartesianGrid stroke="#27272a" vertical={false} />
               <XAxis dataKey="x" type="number" scale="time" domain={["dataMin", "dataMax"]} ticks={ticks} tickFormatter={(v: number) => day(new Date(v).toISOString())} {...AXIS} minTickGap={24} />
-              <YAxis tickFormatter={(v: number) => `$${v}`} {...AXIS} width={48} />
+              <YAxis tickFormatter={(v: number) => tick(v, "$")} {...AXIS} width={48} />
               <ReferenceLine y={0} stroke="#52525b" strokeDasharray="4 4" />
               <Tooltip
                 {...TIP}
@@ -61,7 +61,7 @@ export default function Results({ data }: { data: Data }) {
           </ResponsiveContainer>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
-          Each buy's final result is counted at its buy time. Open positions count as zero until the market settles.
+          Each buy's result is counted at its buy time. Open buys are valued at today's market price until the market settles.
         </p>
       </Card>
 
@@ -70,7 +70,7 @@ export default function Results({ data }: { data: Data }) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 52, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tickFormatter={(v: number) => `${v}%`} {...AXIS} />
+              <XAxis type="number" tickFormatter={(v: number) => tick(v, "", "%")} {...AXIS} />
               <YAxis type="category" dataKey="name" width={104} {...AXIS} tick={{ fill: "#d4d4d8", fontSize: 12 }} />
               <ReferenceLine x={0} stroke="#71717a" />
               <Tooltip {...TIP} cursor={{ fill: "#27272a" }} formatter={(v) => [pct(Number(v)), "ROI after fees"]} />

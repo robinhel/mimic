@@ -3,6 +3,7 @@ export interface Summary {
   sample: boolean;
   sim_trades: number;
   kalshi_roi_pct: number | null;
+  live_run: string | null;
   live_roi_pct: number | null;
   live_roi_fee_pct: number | null;
   live_buys: number;
@@ -37,8 +38,8 @@ export interface Trader {
 }
 
 export interface Latency {
-  median_s: number;
-  max_s: number;
+  median_s: number | null;
+  max_s: number | null;
   buckets: { label: string; count: number }[];
   price_diff_cent_median: number | null;
 }
@@ -46,7 +47,7 @@ export interface Latency {
 export interface RobotEvent {
   t: string;
   type: "buy" | "sell" | "settled" | "skip";
-  title: string;
+  title: string | null;
   usd: number | null;
 }
 

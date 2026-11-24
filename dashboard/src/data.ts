@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import type { Data } from "./types";
 
-async function get<T>(name: string): Promise<T> {
+// null only when the file is missing (404); other errors are thrown and shown on the page.
+async function fetchJson(name: string): Promise<unknown> {
   const res = await fetch(`data/${name}.json`, { cache: "no-cache" });
+  if (res.status === 404) return null;
   if (!res.ok) throw new Error(`data/${name}.json: HTTP ${res.status}`);
-  return (await res.json()) as T;
+  return res.json();
+}
+
+async function get<T>(name: string): Promise<T> {
+  const v = await fetchJson(name);
+  if (v == null) throw new Error(`data/${name}.json: HTTP 404`);
+  return v as T;
 }
 
 async function optional<T>(name: string): Promise<T | null> {
-  try {
-    return await get<T>(name);
-  } catch {
-    return null;
-  }
+  return (await fetchJson(name)) as T | null;
 }
 
 async function loadAll(): Promise<Data> {

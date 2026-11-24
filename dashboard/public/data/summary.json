@@ -3,6 +3,7 @@
   "sample": true,
   "sim_trades": 81384,
   "kalshi_roi_pct": -13.0,
+  "live_run": "test15",
   "live_roi_pct": 3.6,
   "live_roi_fee_pct": 3.1,
   "live_buys": 35,

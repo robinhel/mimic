@@ -1,5 +1,5 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { int, pct } from "../format";
+import { int, pct, tone } from "../format";
 import type { Data } from "../types";
 import { Card } from "./ui";
 
@@ -28,7 +28,7 @@ function layouts(sim: string, kalshi: string): { wide: Layout; tall: Layout } {
     { title: "Paper buy", sub: "fees + slippage", hl: true },
     { title: "Settled", sub: "ROI measured" },
   ];
-  const backtest = { title: `Backtest: ${sim} trades`, sub: `Kalshi history, ${kalshi}, dropped`, dashed: true };
+  const backtest = { title: `Backtest: ${sim} trades`, sub: `Kalshi, main setup ${kalshi}, dropped`, dashed: true };
   // Wide: one row, robot and backtest below.
   const W = 128, G = 30, H = 54;
   const wide: Layout = {
@@ -54,7 +54,7 @@ function layouts(sim: string, kalshi: string): { wide: Layout; tall: Layout } {
     nodes: [
       ...main.map((n, i) => ({ ...n, x: 4, y: 4 + i * (TH + TG), w: TW })),
       { title: "pm_robot", sub: "$5 per buy", x: TW + 30, y: 4 + 2 * (TH + TG), w: 320 - TW - 34 },
-      { ...backtest, sub: `Kalshi history, ${kalshi}`, x: 4, y: 4 + 5 * (TH + TG) + 14, w: 312 },
+      { ...backtest, sub: `Kalshi, main setup ${kalshi}`, x: 4, y: 4 + 5 * (TH + TG) + 14, w: 312 },
     ],
     edges: [
       ...[0, 1, 2, 3].map((i) => ({ d: `M${4 + TW / 2} ${4 + i * (TH + TG) + TH}V${4 + (i + 1) * (TH + TG) - 3}`, hl: i % 2 === 0 })),
@@ -118,9 +118,15 @@ const STEPS = [
   {
     n: "3",
     title: "Measure honestly",
-    text: "When the market resolves, the copy is settled at 0 or 1 and the ROI is counted after fees. Open positions are not counted as wins.",
+    text: "When the market resolves, the copy is settled at 0 or 1. Open copies are valued at today's market price. ROI is counted after fees.",
   },
 ];
+
+// Signed cents with a real minus sign: +0.8¢, −0.5¢.
+function cents(v: number): string {
+  const s = Math.abs(v).toFixed(1);
+  return `${Number(s) === 0 ? "" : v > 0 ? "+" : "\u2212"}${s}¢`;
+}
 
 export default function HowItWorks({ data }: { data: Data }) {
   const { summary, latency } = data;
@@ -148,14 +154,14 @@ export default function HowItWorks({ data }: { data: Data }) {
         <Card title="How fast is the copy?" sub="Seconds from the trader's fill to our signal, latest live run.">
           <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <span>
-              Median <span className="num font-semibold text-zinc-50">{latency.median_s.toFixed(1)} s</span>
+              Median <span className="num font-semibold text-zinc-50">{latency.median_s == null ? "—" : `${latency.median_s.toFixed(1)} s`}</span>
             </span>
             <span>
-              Max <span className="num font-semibold text-zinc-50">{latency.max_s.toFixed(1)} s</span>
+              Max <span className="num font-semibold text-zinc-50">{latency.max_s == null ? "—" : `${latency.max_s.toFixed(1)} s`}</span>
             </span>
             {latency.price_diff_cent_median != null && (
               <span>
-                Price vs. trader <span className="num font-semibold text-zinc-50">+{latency.price_diff_cent_median.toFixed(1)}¢</span>
+                Price vs. trader <span className="num font-semibold text-zinc-50">{cents(latency.price_diff_cent_median)}</span>
               </span>
             )}
           </div>
@@ -180,8 +186,10 @@ export default function HowItWorks({ data }: { data: Data }) {
         <Card title="Why not Kalshi?" sub="The first idea, tested at scale.">
           <p className="text-sm leading-relaxed text-zinc-400">
             The project began with a backtest: match top Polymarket traders' buys to the same questions on Kalshi and copy them there.
-            Over <span className="num text-zinc-200">{int(summary.sim_trades)}</span> simulated trades the copies returned{" "}
-            <span className="num font-medium text-rose-400">{pct(summary.kalshi_roi_pct)}</span> after fees, so the idea was dropped.
+            It ran <span className="num text-zinc-200">{int(summary.sim_trades)}</span> simulated trades across 4 delays and 3 strategies.
+            The main setup (2 min delay, hold to settlement) returned{" "}
+            <span className={`num font-medium ${tone(summary.kalshi_roi_pct)}`}>{pct(summary.kalshi_roi_pct)}</span> after fees, so the idea
+            was dropped.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             The live test on Polymarket copies on the same exchange, seconds after the trader, with the real order book. The robot can
