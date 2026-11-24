@@ -1,0 +1,5 @@
+{"type": "buy", "dry": true, "id": "s1", "title": "Market 1", "name": "Alice", "usd": 5.0, "price": 0.5, "trader_price": 0.45, "delay": 1, "t": 1780000002}
+{"type": "skip", "id": "s2", "title": "Market 2", "why": "pris", "t": 1780086400}
+{"type": "error", "event": "settle", "error": "timeout", "t": 1780086405}
+{"type": "sell", "dry": true, "title": "Market 1", "name": "Alice", "shares": 5.0, "usd": 2.5, "t": 1780172800}
+{"type": "settled", "title": "Market 1", "usd": 4.0, "pnl": -1.0, "t": 1780259200}

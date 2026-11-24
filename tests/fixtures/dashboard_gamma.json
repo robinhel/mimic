@@ -1,0 +1,17 @@
+[
+ {
+  "conditionId": "c1",
+  "closed": true,
+  "outcomePrices": "[\"1\", \"0\"]"
+ },
+ {
+  "conditionId": "c2",
+  "closed": true,
+  "outcomePrices": "[\"1\", \"0\"]"
+ },
+ {
+  "conditionId": "c3",
+  "closed": false,
+  "outcomePrices": "[\"0.6\", \"0.4\"]"
+ }
+]

@@ -1,0 +1,19 @@
+[
+ {
+  "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "name": "Alice",
+  "safe": true,
+  "source": "vår"
+ },
+ {
+  "wallet": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "name": "0xbbbbbbbbbb-1700000000",
+  "safe": false,
+  "source": "vår"
+ },
+ {
+  "wallet": "0xcccccccccccccccccccccccccccccccccccccccc",
+  "safe": false,
+  "source": "polkyo"
+ }
+]
