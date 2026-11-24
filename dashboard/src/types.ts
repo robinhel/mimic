@@ -58,6 +58,25 @@ export interface Robot {
   events: RobotEvent[];
 }
 
+export interface ReplayRow {
+  strategy: string;
+  delay_s: number;
+  end_usd: number;
+  roi_pct: number;
+  buys: number;
+  sold: number;
+  settled: number;
+  open: number;
+}
+
+export interface Replay {
+  name: string;
+  from: string;
+  to: string;
+  start_usd: number;
+  rows: ReplayRow[];
+}
+
 export interface Data {
   summary: Summary;
   runs: Run[];
@@ -65,4 +84,5 @@ export interface Data {
   traders: Trader[];
   latency: Latency;
   robot: Robot | null;
+  replay: Replay | null;
 }

@@ -37,8 +37,8 @@ export default function App() {
           Can you make money by copying the best Polymarket traders?
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-          copycheck follows top traders on-chain, copies their buys within seconds on paper, and measures the result
-          after fees and slippage. Built in Python. Read-only research.
+          copycheck follows top traders on-chain, copies their buys on paper against the live order book, and measures
+          the result after fees and slippage. Built in Python. Read-only research.
         </p>
         {s.sample && (
           <p className="max-w-2xl rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
@@ -49,12 +49,19 @@ export default function App() {
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Simulated trades" value={int(s.sim_trades)} sub="Kalshi backtest" />
-        <Stat label="Kalshi copy ROI" value={pct(s.kalshi_roi_pct, 0)} valueClass={tone(s.kalshi_roi_pct)} sub={<Badge tone="red">dropped</Badge>} />
+        <Stat label="Kalshi copy ROI" value={pct(s.kalshi_roi_pct)} valueClass={tone(s.kalshi_roi_pct)} sub={<Badge tone="red">dropped</Badge>} />
         <Stat
           label="Live paper ROI"
-          value={pct(s.live_roi_fee_pct ?? s.live_roi_pct, 0)}
+          value={pct(s.live_roi_fee_pct ?? s.live_roi_pct)}
           valueClass={tone(s.live_roi_fee_pct ?? s.live_roi_pct)}
-          sub={`${s.live_buys} buys, ${s.live_settled} settled, after fees`}
+          sub={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Badge tone="amber">small sample</Badge>
+              <span>
+                {s.live_buys} buys, {s.live_settled} settled, after fees
+              </span>
+            </span>
+          }
         />
         <Stat label="Traders followed" value={String(s.players)} sub={`${s.players_trusted} trusted`} />
       </div>
@@ -82,7 +89,7 @@ export default function App() {
         {tab === "how" && <HowItWorks data={data} />}
         {tab === "traders" && <Traders data={data} />}
         {tab === "robot" && <Robot data={data} />}
-        {tab === "about" && <About />}
+        {tab === "about" && <About data={data} />}
       </main>
     </Shell>
   );

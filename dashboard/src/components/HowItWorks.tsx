@@ -23,7 +23,7 @@ interface Layout {
 function layouts(sim: string, kalshi: string): { wide: Layout; tall: Layout } {
   const main = [
     { title: "Polygon chain", sub: "trader buys" },
-    { title: "pm_livetest", sub: "sees it in 0–2 s", hl: true },
+    { title: "pm_livetest", sub: "goal: 0–2 s", hl: true },
     { title: "Signal", sub: "order book saved" },
     { title: "Paper buy", sub: "fees + slippage", hl: true },
     { title: "Settled", sub: "ROI measured" },
@@ -104,11 +104,11 @@ function Diagram({ l, id, className }: { l: Layout; id: string; className: strin
   );
 }
 
-const STEPS = [
+const steps = (measured: string) => [
   {
     n: "1",
     title: "Watch the chain",
-    text: "pm_livetest reads OrderFilled events from Polymarket's exchange contracts on Polygon. A followed trader's buy shows up within 0–2 seconds, against about 8 minutes in the public Data API.",
+    text: `pm_livetest reads OrderFilled events from Polymarket's exchange contracts on Polygon. It is built to see a followed trader's buy within 0–2 seconds, instead of waiting for the public Data API, which lagged about 8 minutes when this was built. ${measured}`,
   },
   {
     n: "2",
@@ -122,6 +122,11 @@ const STEPS = [
   },
 ];
 
+// Seconds without a pointless ".0": 18 s, 2.5 s.
+function secs(v: number): string {
+  return `${Number(v.toFixed(1))} s`;
+}
+
 // Signed cents with a real minus sign: +0.8¢, −0.5¢.
 function cents(v: number): string {
   const s = Math.abs(v).toFixed(1);
@@ -130,7 +135,11 @@ function cents(v: number): string {
 
 export default function HowItWorks({ data }: { data: Data }) {
   const { summary, latency } = data;
-  const { wide, tall } = layouts(int(summary.sim_trades), pct(summary.kalshi_roi_pct, 0));
+  const { wide, tall } = layouts(int(summary.sim_trades), pct(summary.kalshi_roi_pct));
+  const measured =
+    latency.median_s == null
+      ? ""
+      : `Measured in the latest live run: median ${secs(latency.median_s)} from the trader's fill to our signal${latency.max_s == null ? "" : `, max ${secs(latency.max_s)}`}.`;
   return (
     <div className="grid gap-4">
       <Card title="From a trader's buy to a measured result" sub="Green steps are where speed and price decide the outcome.">
@@ -139,7 +148,7 @@ export default function HowItWorks({ data }: { data: Data }) {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {STEPS.map((s) => (
+        {steps(measured).map((s) => (
           <Card key={s.n}>
             <div className="flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-semibold text-emerald-300">{s.n}</span>
@@ -154,10 +163,10 @@ export default function HowItWorks({ data }: { data: Data }) {
         <Card title="How fast is the copy?" sub="Seconds from the trader's fill to our signal, latest live run.">
           <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <span>
-              Median <span className="num font-semibold text-zinc-50">{latency.median_s == null ? "—" : `${latency.median_s.toFixed(1)} s`}</span>
+              Median <span className="num font-semibold text-zinc-50">{latency.median_s == null ? "—" : secs(latency.median_s)}</span>
             </span>
             <span>
-              Max <span className="num font-semibold text-zinc-50">{latency.max_s == null ? "—" : `${latency.max_s.toFixed(1)} s`}</span>
+              Max <span className="num font-semibold text-zinc-50">{latency.max_s == null ? "—" : secs(latency.max_s)}</span>
             </span>
             {latency.price_diff_cent_median != null && (
               <span>
@@ -192,8 +201,8 @@ export default function HowItWorks({ data }: { data: Data }) {
             was dropped.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-            The live test on Polymarket copies on the same exchange, seconds after the trader, with the real order book. The robot can
-            then buy for real, with hard limits (see the Robot tab).
+            The live test on Polymarket copies on the same exchange, with the real order book at the moment of the signal. The robot
+            can then buy for real, with hard limits (see the Robot tab).
           </p>
         </Card>
       </div>

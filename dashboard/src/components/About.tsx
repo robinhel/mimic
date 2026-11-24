@@ -1,9 +1,11 @@
+import { int, pct } from "../format";
+import type { Data } from "../types";
 import { Card } from "./ui";
 
 const STACK = [
   { name: "Python 3.12", text: "All collection, simulation and reports" },
   { name: "SQLite", text: "Trades, markets and prices" },
-  { name: "Polygon RPC", text: "OrderFilled events, 0–2 s after a trade" },
+  { name: "Polygon RPC", text: "OrderFilled events, aiming at 0–2 s after a trade" },
   { name: "Polymarket Data API v2", text: "Trader history and activity" },
   { name: "Polymarket Gamma", text: "Questions, rules and outcomes" },
   { name: "Kalshi API", text: "Prices and candlesticks for the backtest" },
@@ -11,14 +13,22 @@ const STACK = [
   { name: "React + Recharts", text: "This dashboard, built from JSON exports" },
 ];
 
-const LEARNED = [
-  "Copying with a delay on another exchange loses money: the Kalshi backtest returned about −13 % after fees.",
-  "Speed matters. Reading the chain directly gives the signal in 0–2 seconds instead of about 8 minutes.",
-  "Fees and slippage decide the result, so every copy is priced against the real order book, not the trader's price.",
-  "Few settled buys means wide error bars. A small positive result is a reason to keep testing, not proof.",
-];
+function learned({ summary, runs, latency }: Data): string[] {
+  const live = runs.filter((r) => r.name !== "Kalshi backtest");
+  const roi = live.map((r) => r.roi_fee_pct ?? r.roi_pct).filter((v): v is number => v != null);
+  const buys = live.map((r) => r.buys);
+  return [
+    `Copying with a delay on another exchange loses money: the Kalshi backtest returned ${pct(summary.kalshi_roi_pct)} after fees on ${int(summary.sim_trades)} simulated trades.`,
+    `Speed matters. Reading the chain directly is built to give the signal in 0–2 seconds instead of minutes in the Data API.${latency.median_s == null ? "" : ` In the latest live run the measured median was ${Number(latency.median_s.toFixed(1))} s.`}`,
+    "Fees and slippage decide the result, so every copy is priced against the real order book, not the trader's price.",
+    roi.length
+      ? `Few settled buys means wide error bars: the live tests ran from ${pct(Math.min(...roi))} to ${pct(Math.max(...roi))} after fees, on ${Math.min(...buys)} to ${Math.max(...buys)} buys each. A small result either way is a reason to keep testing, not proof.`
+      : "Few settled buys means wide error bars. A small result either way is a reason to keep testing, not proof.",
+  ];
+}
 
-export default function About() {
+export default function About({ data }: { data: Data }) {
+  const LEARNED = learned(data);
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card title="Built with">

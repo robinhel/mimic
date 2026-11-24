@@ -1,7 +1,7 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { dateRange, dateTime, day, int, pct, tick, tone, usd } from "../format";
-import type { Data } from "../types";
-import { Card } from "./ui";
+import type { Data, Replay } from "../types";
+import { Badge, Card, Stat } from "./ui";
 
 const AXIS = { stroke: "#71717a", fontSize: 11 };
 const TIP = {
@@ -20,6 +20,8 @@ export default function Results({ data }: { data: Data }) {
   const ticks: number[] = [];
   if (points.length) for (let d = Math.ceil(points[0].x / DAY) * DAY; d <= points.at(-1)!.x; d += DAY) ticks.push(d);
   const color = last >= 0 ? "#34d399" : "#fb7185";
+  const hours = points.length ? (points.at(-1)!.x - points[0].x) / 3600000 : 0;
+  const span = hours <= 24 ? "within one day" : `over ${Math.ceil(hours / 24)} days`;
 
   return (
     <div className="grid gap-4">
@@ -38,6 +40,9 @@ export default function Results({ data }: { data: Data }) {
             {summary.live_buys} buys, {summary.live_settled} settled
           </span>
         </div>
+        <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
+          Small sample: {summary.live_buys} buys, {summary.live_settled} settled, {span}. Far too few to tell skill from luck.
+        </p>
         <div className="h-56 sm:h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
@@ -90,9 +95,9 @@ export default function Results({ data }: { data: Data }) {
                 <th className="py-2 font-normal">Run</th>
                 <th className="hidden py-2 font-normal sm:table-cell">Period</th>
                 <th className="py-2 text-right font-normal">Buys</th>
-                <th className="py-2 text-right font-normal">Settled</th>
+                <th className="hidden py-2 text-right font-normal sm:table-cell">Settled</th>
                 <th className="hidden py-2 text-right font-normal sm:table-cell">ROI</th>
-                <th className="py-2 text-right font-normal">After fees</th>
+                <th className="py-2 pl-3 text-right font-normal">After fees</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -101,16 +106,93 @@ export default function Results({ data }: { data: Data }) {
                   <td className="py-2 pr-2 text-zinc-200">{r.name}</td>
                   <td className="hidden py-2 text-zinc-400 sm:table-cell">{dateRange(r.from, r.to)}</td>
                   <td className="num py-2 text-right">{int(r.buys)}</td>
-                  <td className="num py-2 text-right">{int(r.settled)}</td>
+                  <td className="num hidden py-2 text-right sm:table-cell">{int(r.settled)}</td>
                   <td className={`num hidden py-2 text-right sm:table-cell ${tone(r.roi_pct)}`}>{pct(r.roi_pct)}</td>
-                  <td className={`num py-2 text-right font-medium ${tone(r.roi_fee_pct)}`}>{pct(r.roi_fee_pct)}</td>
+                  <td className={`num py-2 pl-3 text-right font-medium ${tone(r.roi_fee_pct)}`}>{pct(r.roi_fee_pct)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      {data.replay && <ReplayCard r={data.replay} />}
     </div>
+  );
+}
+
+function ReplayCard({ r }: { r: Replay }) {
+  const main = r.rows.find((x) => x.strategy === "Robot rules" && x.delay_s === 30) ?? r.rows[0];
+  if (!main) return null;
+  return (
+    <>
+      <div className="mt-4 flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 bg-zinc-800" />
+        <span className="text-[11px] uppercase tracking-wider text-sky-300">Backtest</span>
+        <span className="h-px flex-1 bg-zinc-800" />
+      </div>
+      <Card
+        className="border-dashed border-sky-500/30"
+        title={`Replay of the robot's rules (${r.name}, ${dateRange(r.from, r.to)})`}
+        sub={`A script went back over these days and bought after the fact by the robot's rules, from a $${r.start_usd} cash box. The number is the change of that $${r.start_usd} at the end, with open buys valued at the market price. It is not the same measure as the ROI per buy above.`}
+      >
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Badge tone="blue">Backtest, not live</Badge>
+          <span className="text-xs text-zinc-400">
+            Main row: {main.strategy}, {main.delay_s} s delay
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+          <div className="col-span-2 grid sm:col-span-1">
+            <Stat label={`Change of $${r.start_usd}`} compact value={pct(main.roi_pct)} valueClass={tone(main.roi_pct)} sub={`ends at ${usd(main.end_usd)}`} />
+          </div>
+          <Stat label="Buys" compact value={int(main.buys)} />
+          <Stat label="Settled" compact value={int(main.settled)} />
+          <Stat label="Sold" compact value={int(main.sold)} />
+          <Stat label="Still open" compact value={int(main.open)} />
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs text-zinc-500">
+              <tr>
+                <th className="py-2 font-normal">Rules</th>
+                <th className="py-2 text-right font-normal">Delay</th>
+                <th className="hidden py-2 text-right font-normal sm:table-cell">Ends at</th>
+                <th className="py-2 pl-3 text-right font-normal">Change</th>
+                <th className="py-2 pl-3 text-right font-normal">Buys</th>
+                <th className="hidden py-2 text-right font-normal sm:table-cell">Settled</th>
+                <th className="hidden py-2 text-right font-normal sm:table-cell">Sold</th>
+                <th className="hidden py-2 text-right font-normal sm:table-cell">Open</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+              {r.rows.map((x) => (
+                <tr key={`${x.strategy}-${x.delay_s}`} className={x === main ? "bg-sky-500/5" : ""}>
+                  <td className="py-2 pr-2 text-zinc-200">
+                    {x.strategy}
+                    <div className="text-xs text-zinc-500 sm:hidden">
+                      {x.settled} settled · {x.sold} sold · {x.open} open
+                    </div>
+                  </td>
+                  <td className="num py-2 pl-2 text-right text-zinc-400">{x.delay_s} s</td>
+                  <td className="num hidden py-2 text-right sm:table-cell">{usd(x.end_usd)}</td>
+                  <td className={`num py-2 pl-3 text-right font-medium ${tone(x.roi_pct)}`}>{pct(x.roi_pct)}</td>
+                  <td className="num py-2 pl-3 text-right">{int(x.buys)}</td>
+                  <td className="num hidden py-2 text-right sm:table-cell">{int(x.settled)}</td>
+                  <td className="num hidden py-2 text-right sm:table-cell">{int(x.sold)}</td>
+                  <td className="num hidden py-2 text-right sm:table-cell">{int(x.open)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-zinc-500">
+          Robot rules: copy a trusted trader's every buy, and other followed traders' buys when a second one bought the same answer.
+          Delay is the time from the trader's buy to the replayed buy. Sold means the copy followed the trader's sell; open buys were
+          still open at the end.
+        </p>
+      </Card>
+    </>
   );
 }
 

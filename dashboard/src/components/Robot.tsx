@@ -52,14 +52,14 @@ export default function Robot({ data }: { data: Data }) {
         ) : (
           <Card title="Robot log" sub="No robot data is published yet.">
             <p className="text-sm leading-relaxed text-zinc-400">
-              The log appears here when the robot has run. Until then, this is how it works and what stops it.
+              The robot's real buys will be published here later. Until then, this is how it works and what stops it.
             </p>
           </Card>
         )}
         <Card title="How the robot works">
           <ol className="grid gap-2 text-sm leading-relaxed text-zinc-400">
             <li>
-              <span className="text-zinc-200">1.</span> Reads the signals and sells that the live test writes, seconds after a followed trader acts.
+              <span className="text-zinc-200">1.</span> Reads the signals and sells that the live test writes as soon as it sees a followed trader act.
             </li>
             <li>
               <span className="text-zinc-200">2.</span> Copies only when a second followed trader bought the same answer within 3 days, or the trader is trusted.

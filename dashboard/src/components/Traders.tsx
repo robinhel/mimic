@@ -21,7 +21,7 @@ export default function Traders({ data }: { data: Data }) {
                 <th className="py-2 text-right font-normal">Copied</th>
                 <th className="hidden py-2 text-right font-normal sm:table-cell">Settled</th>
                 <th className="hidden py-2 text-right font-normal md:table-cell">ROI</th>
-                <th className="py-2 text-right font-normal">After fees</th>
+                <th className="py-2 pl-3 text-right font-normal">After fees</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -40,7 +40,7 @@ export default function Traders({ data }: { data: Data }) {
                   <td className="num py-2 text-right">{t.copied}</td>
                   <td className="num hidden py-2 text-right sm:table-cell">{t.settled}</td>
                   <td className={`num hidden py-2 text-right md:table-cell ${tone(t.roi_pct)}`}>{pct(t.roi_pct)}</td>
-                  <td className={`num py-2 text-right font-medium ${tone(t.roi_fee_pct)}`}>{pct(t.roi_fee_pct)}</td>
+                  <td className={`num py-2 pl-3 text-right font-medium ${tone(t.roi_fee_pct)}`}>{pct(t.roi_fee_pct)}</td>
                 </tr>
               ))}
             </tbody>
