@@ -17,9 +17,10 @@ function learned({ summary, runs, latency }: Data): string[] {
   const live = runs.filter((r) => r.name !== "Kalshi backtest");
   const roi = live.map((r) => r.roi_fee_pct ?? r.roi_pct).filter((v): v is number => v != null);
   const buys = live.map((r) => r.buys);
+  const kalshi = runs.find((r) => r.name === "Kalshi backtest");
   return [
-    `Copying with a delay on another exchange loses money: the Kalshi backtest returned ${pct(summary.kalshi_roi_pct)} after fees on ${int(summary.sim_trades)} simulated trades.`,
-    `Speed matters. Reading the chain directly is built to give the signal in 0–2 seconds instead of minutes in the Data API.${latency.median_s == null ? "" : ` In the latest live run the measured median was ${Number(latency.median_s.toFixed(1))} s.`}`,
+    `Copying with a delay on another exchange loses money: in the Kalshi backtest the main setup returned ${pct(summary.kalshi_roi_pct)} after fees${kalshi ? ` on ${int(kalshi.buys)} trades` : ""}.`,
+    `Speed matters. Reading the chain directly is built to give the signal in 0–2 seconds instead of minutes in the Data API.${latency.median_s == null ? "" : ` In ${summary.live_run ?? "the largest live run"} the measured median was ${Number(latency.median_s.toFixed(1))} s.`}`,
     "Fees and slippage decide the result, so every copy is priced against the real order book, not the trader's price.",
     roi.length
       ? `Few settled buys means wide error bars: the live tests ran from ${pct(Math.min(...roi))} to ${pct(Math.max(...roi))} after fees, on ${Math.min(...buys)} to ${Math.max(...buys)} buys each. A small result either way is a reason to keep testing, not proof.`

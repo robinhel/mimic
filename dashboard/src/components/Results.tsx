@@ -26,7 +26,7 @@ export default function Results({ data }: { data: Data }) {
   return (
     <div className="grid gap-4">
       <Card
-        title="Paper portfolio, latest live run"
+        title="Paper portfolio, largest live run"
         sub={`Cumulative result in USD, $10 per copied buy from all followed traders, after fees and slippage.${summary.live_run ? ` ${summary.live_run}${live ? `, ${dateRange(live.from, live.to)}` : ""}.` : ""}`}
       >
         <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
@@ -79,9 +79,9 @@ export default function Results({ data }: { data: Data }) {
               <YAxis type="category" dataKey="name" width={104} {...AXIS} tick={{ fill: "#d4d4d8", fontSize: 12 }} />
               <ReferenceLine x={0} stroke="#71717a" />
               <Tooltip {...TIP} cursor={{ fill: "#27272a" }} formatter={(v) => [pct(Number(v)), "ROI after fees"]} />
-              <Bar isAnimationActive={false} dataKey="v" radius={3} maxBarSize={22}>
+              <Bar isAnimationActive={false} dataKey="v" radius={3} maxBarSize={22} minPointSize={1}>
                 {bars.map((b) => (
-                  <Cell key={b.name} fill={b.v >= 0 ? "#34d399" : "#fb7185"} />
+                  <Cell key={b.name} fill={b.v === 0 ? "#71717a" : b.v > 0 ? "#34d399" : "#fb7185"} />
                 ))}
                 <LabelList dataKey="v" content={BarLabel} />
               </Bar>
@@ -116,12 +116,12 @@ export default function Results({ data }: { data: Data }) {
         </div>
       </Card>
 
-      {data.replay && <ReplayCard r={data.replay} />}
+      {data.replay && <ReplayCard r={data.replay} median={data.latency.median_s} />}
     </div>
   );
 }
 
-function ReplayCard({ r }: { r: Replay }) {
+function ReplayCard({ r, median }: { r: Replay; median: number | null }) {
   const main = r.rows.find((x) => x.strategy === "Robot rules" && x.delay_s === 30) ?? r.rows[0];
   if (!main) return null;
   return (
@@ -139,7 +139,7 @@ function ReplayCard({ r }: { r: Replay }) {
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge tone="blue">Backtest, not live</Badge>
           <span className="text-xs text-zinc-400">
-            Main row: {main.strategy}, {main.delay_s} s delay
+            Main row: {main.strategy}, {main.delay_s} s delay{main.delay_s === 30 && median != null ? `, closest to the ${Number(median.toFixed(1))} s median delay measured live` : ""}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
@@ -171,7 +171,7 @@ function ReplayCard({ r }: { r: Replay }) {
                   <td className="py-2 pr-2 text-zinc-200">
                     {x.strategy}
                     <div className="text-xs text-zinc-500 sm:hidden">
-                      {x.settled} settled · {x.sold} sold · {x.open} open
+                      {x.settled} settled, {x.open} open positions · {x.sold} sells
                     </div>
                   </td>
                   <td className="num py-2 pl-2 text-right text-zinc-400">{x.delay_s} s</td>
@@ -188,8 +188,10 @@ function ReplayCard({ r }: { r: Replay }) {
         </div>
         <p className="mt-4 text-xs leading-relaxed text-zinc-500">
           Robot rules: copy a trusted trader's every buy, and other followed traders' buys when a second one bought the same answer.
-          Delay is the time from the trader's buy to the replayed buy. Sold means the copy followed the trader's sell; open buys were
-          still open at the end.
+          Delay is the time from the trader's buy to the replayed buy. Sold means the copy followed the trader's sell; Open means the
+          position was still open at the end. Buys and Sold count events: adding to an open position counts as a buy, and a partial sell
+          counts as a sell while the position stays open. Settled and Open count positions. A position can appear in both, so the parts do
+          not add up to Buys.
         </p>
       </Card>
     </>

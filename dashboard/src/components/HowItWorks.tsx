@@ -139,7 +139,7 @@ export default function HowItWorks({ data }: { data: Data }) {
   const measured =
     latency.median_s == null
       ? ""
-      : `Measured in the latest live run: median ${secs(latency.median_s)} from the trader's fill to our signal${latency.max_s == null ? "" : `, max ${secs(latency.max_s)}`}.`;
+      : `Measured in ${summary.live_run ?? "the largest live run"}: median ${secs(latency.median_s)} from the trader's fill to our signal${latency.max_s == null ? "" : `, max ${secs(latency.max_s)}`}.`;
   return (
     <div className="grid gap-4">
       <Card title="From a trader's buy to a measured result" sub="Green steps are where speed and price decide the outcome.">
@@ -160,7 +160,7 @@ export default function HowItWorks({ data }: { data: Data }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card title="How fast is the copy?" sub="Seconds from the trader's fill to our signal, latest live run.">
+        <Card title="How fast is the copy?" sub={`Seconds from the trader's fill to our signal, ${summary.live_run ?? "largest live run"}.`}>
           <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <span>
               Median <span className="num font-semibold text-zinc-50">{latency.median_s == null ? "—" : secs(latency.median_s)}</span>

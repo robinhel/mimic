@@ -3,7 +3,7 @@ const MINUS = "\u2212";
 export function pct(v: number | null | undefined, digits = 1): string {
   if (v == null) return "—";
   const s = Math.abs(v).toFixed(digits);
-  if (Number(s) === 0) return `0 %`;
+  if (Number(s) === 0) return `${s} %`;
   return `${v > 0 ? "+" : MINUS}${s} %`;
 }
 
@@ -47,6 +47,7 @@ export function dateRange(from: string, to: string): string {
   const t = `${to}T00:00:00Z`;
   const fy = from.slice(0, 4);
   const ty = to.slice(0, 4);
+  if (from === to) return `${day(f)} ${ty}`;
   return fy === ty ? `${day(f)} – ${day(t)} ${ty}` : `${day(f)} ${fy} – ${day(t)} ${ty}`;
 }
 

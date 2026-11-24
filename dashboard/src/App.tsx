@@ -58,6 +58,7 @@ export default function App() {
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Badge tone="amber">small sample</Badge>
               <span>
+                {s.live_run ? `${s.live_run}: ` : ""}
                 {s.live_buys} buys, {s.live_settled} settled, after fees
               </span>
             </span>
@@ -74,7 +75,7 @@ export default function App() {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`shrink-0 border-b-2 px-2 py-3 text-[13px] sm:px-3 sm:text-sm transition-colors ${
+              className={`shrink-0 border-b-2 px-1.5 py-3 text-[13px] sm:px-3 sm:text-sm transition-colors ${
                 tab === t.id ? "border-emerald-400 text-zinc-50" : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >

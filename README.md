@@ -10,11 +10,11 @@ Dashboard: https://robinhel.github.io/copycheck/
 
 The first test was a backtest. It copied Polymarket players onto matching Kalshi markets, with delays and Kalshi fees. It ran 81,384 simulated trades across 4 delays and 3 strategies. The main setup, a 2 minute delay and holding to settlement, returned -13.2% after fees on 1,816 trades. That approach was dropped.
 
-The second test followed players live on Polymarket itself, with paper money. Live tests 1 to 3 ran on 15 and 16 November 2026 and the wide test on 17 November. The biggest one, live test 3, copied 23 buys from 48 followed players, and 20 of them were settled. It returned -8.5% before fees and -10.6% after fees. The live ROI counts every buy from all followed players. Open buys are valued at the current market price. That is a very small sample from about one day, so it says little either way.
+The second test followed players live on Polymarket itself, with paper money. Live tests 1 to 3 ran on 15 and 16 November 2026 and the wide test on 17 November. The biggest one, live test 3, followed 48 players. 6 of them made buys, which gave 23 copied buys, and 20 of them were settled. It returned -8.5% before fees and -10.6% after fees. The live ROI counts every buy from all followed players. Open buys are valued at the current market price. That is a very small sample from about one day, so it says little either way.
 
 A third check, test15, was not live. A script went back over 16 to 23 November 2026 and bought after the fact by the robot's rules, from a cash box of 100 dollars. The cash box ended between +2.8% and +3.6%, depending on the delay (5, 30 or 120 seconds), with open buys valued at the market price. With a 30 second delay it made 35 buys, and 18 of them were still open at the end. This is a change of the whole cash box, not ROI per buy, so it cannot be compared directly with the live numbers.
 
-That is far too little data for a conclusion. A handful of settled markets can swing the result either way, and one week says nothing about how the players do over time. The honest answer so far is: not proven.
+That is far too little data for a conclusion. A handful of settled markets can swing the result either way, and live tests that ran for a day or two, plus one week of replay, say nothing about how the players do over time. The honest answer so far is: not proven.
 
 ## How it works
 
@@ -53,7 +53,7 @@ uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
     --run NAME=DATADIR --db copycheck.db --robot ROBOTDIR
 ```
 
-`--live` is the latest live test. If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. Without `--robot` the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.
+`--live` is the live test shown as the headline number on the dashboard, currently the largest one (live test 3). If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. Without `--robot` the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.
 
 `replay.json` is not made by the export. It is written by hand from the test15 result, and the export leaves it alone.
 
