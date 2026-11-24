@@ -25,10 +25,10 @@ export default function Robot({ data }: { data: Data }) {
       <div className="grid min-w-0 content-start gap-4 lg:col-span-3">
         {r ? (
           <>
-            <div className="grid grid-cols-3 gap-3">
-              <Stat label="Spent" value={usd(r.spent_usd)} />
-              <Stat label="Back" value={usd(r.back_usd)} />
-              <Stat label="Open buys" value={String(r.open)} />
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <Stat label="Spent" compact value={usd(r.spent_usd)} />
+              <Stat label="Back" compact value={usd(r.back_usd)} />
+              <Stat label="Open buys" compact value={String(r.open)} />
             </div>
             <Card title="Robot log" sub="Newest first. Times in UTC.">
               <ul className="divide-y divide-zinc-800">

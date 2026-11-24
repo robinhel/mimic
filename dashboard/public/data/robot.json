@@ -8,7 +8,7 @@
     { "t": "2026-11-21T09:15:02Z", "type": "buy", "title": "Will the Fed cut rates in December?", "usd": 4.6 },
     { "t": "2026-11-21T11:48:55Z", "type": "buy", "title": "Lakers vs. Celtics: Lakers win?", "usd": 5.0 },
     { "t": "2026-11-21T16:20:09Z", "type": "sell", "title": "Trader sold 50% – Will the Fed cut rates in December?", "usd": 2.8 },
-    { "t": "2026-11-22T07:05:44Z", "type": "skip", "title": "No second trusted trader within 3 days", "usd": null },
+    { "t": "2026-11-22T07:05:44Z", "type": "skip", "title": "No second followed trader bought within 3 days", "usd": null },
     { "t": "2026-11-22T13:31:20Z", "type": "buy", "title": "Will ETH trade above $3,500 on Nov 24?", "usd": 5.0 },
     { "t": "2026-11-22T23:00:00Z", "type": "settled", "title": "Market resolved YES – Will BTC close above $95k on Nov 22?", "usd": 9.1 },
     { "t": "2026-11-23T10:12:47Z", "type": "buy", "title": "Will Arsenal beat Chelsea on Nov 23?", "usd": 5.0 }

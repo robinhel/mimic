@@ -10,11 +10,11 @@ export function Card({ title, sub, children, className = "" }: { title?: string;
   );
 }
 
-export function Stat({ label, value, sub, valueClass = "text-zinc-50" }: { label: string; value: string; sub?: ReactNode; valueClass?: string }) {
+export function Stat({ label, value, sub, valueClass = "text-zinc-50", compact = false }: { label: string; value: string; sub?: ReactNode; valueClass?: string; compact?: boolean }) {
   return (
-    <div className="min-w-0 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+    <div className={`min-w-0 rounded-xl border border-zinc-800 bg-zinc-900/60 ${compact ? "p-3 sm:p-4" : "p-4"}`}>
       <div className="text-xs text-zinc-400">{label}</div>
-      <div className={`num mt-1 text-2xl font-semibold tracking-tight sm:text-3xl ${valueClass}`}>{value}</div>
+      <div className={`num mt-1 font-semibold tracking-tight sm:text-3xl ${compact ? "text-lg" : "text-2xl"} ${valueClass}`}>{value}</div>
       {sub && <div className="mt-1 text-xs text-zinc-400">{sub}</div>}
     </div>
   );

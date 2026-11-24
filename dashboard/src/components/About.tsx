@@ -14,7 +14,7 @@ const STACK = [
 const LEARNED = [
   "Copying with a delay on another exchange loses money: the Kalshi backtest returned about −13 % after fees.",
   "Speed matters. Reading the chain directly gives the signal in 0–2 seconds instead of about 8 minutes.",
-  "Fees and slippage eat most of the edge, so every copy is priced against the real order book, not the trader's price.",
+  "Fees and slippage decide the result, so every copy is priced against the real order book, not the trader's price.",
   "Few settled buys means wide error bars. A small positive result is a reason to keep testing, not proof.",
 ];
 
