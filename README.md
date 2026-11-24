@@ -50,10 +50,10 @@ Export data for the dashboard. OUTDIR should be `dashboard/public/data`. Commit 
 
 ```
 uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
-    --run NAME=DATADIR --db copycheck.db --robot ROBOTDIR
+    --run NAME=DATADIR --db copycheck.db --robot-api
 ```
 
-`--live` is the live test shown as the headline number on the dashboard, currently the largest one (live test 3). If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. Without `--robot` the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.
+`--live` is the live test shown as the headline number on the dashboard, currently the largest one (live test 3). If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. `--robot-api` instead fetches the robot's real buys, sells and redeems from Polymarket's public Data API. It reads the robot's address only from `POLYMARKET_WALLET_ADDRESS` in your local `.env`, stops if it is missing, and never prints or writes the address. Skips exist only in the robot's own log, so they are not shown with `--robot-api`. `--robot` and `--robot-api` cannot be used together. Without either, the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.
 
 `replay.json` is not made by the export. It is written by hand from the test15 result, and the export leaves it alone.
 

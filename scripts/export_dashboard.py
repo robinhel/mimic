@@ -1,19 +1,22 @@
 """Skriver JSON-filerna till dashboarden (se kontraktet för dashboard/public/data/).
 
     python scripts/export_dashboard.py OUTDIR --live DATADIR [--run NAME=DATADIR ...]
-        [--db copycheck.db] [--robot ROBOTDIR]
+        [--db copycheck.db] [--robot ROBOTDIR | --robot-api]
 
 --live: senaste livetestet (summary, equity, traders, latency). --run: en rad per testkörning
 i runs.json (mappar utan signaler hoppas över); live_run i summary är namnet på den --run som
 har samma mapp som --live, annars mappens namn. --db: antal sim_trades och Kalshi-backtestens
 ROI. --robot: en kopia av robotens mapp (robot.jsonl, gärna state.json) där roboten bara körts
-med --live; torrkörda händelser stoppar exporten. Utan --robot tas en gammal robot.json bort.
+med --live; torrkörda händelser stoppar exporten. --robot-api: robotens riktiga köp, försäljningar
+och inlösen från Polymarkets Data API v2, för adressen i POLYMARKET_WALLET_ADDRESS (.env, bara
+lokalt; adressen skrivs aldrig ut). Utan båda tas en gammal robot.json bort.
 Räknar som pm_livetest.py report: 10 $ per köp direkt, utan marknader som slutar inom en timme.
 Innan något skrivs letar programmet efter plånböcker, nycklar och hemligheter och stoppar.
 """
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import statistics
@@ -23,7 +26,10 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from copycheck import report
+import requests
+
+from copycheck import polymarket, report
+from copycheck.http import HttpClient
 
 sys.path.insert(0, str(Path(__file__).parent))
 from pm_livetest import BASE, SHORT, buy_fill, outcomes, read_jl  # noqa: E402
@@ -173,7 +179,32 @@ def robot_file(d):
     }
 
 
-def build(live, http=None, now=None, runs=(), db_path=None, robot=None):
+def robot_api(address, http):
+    """robot.json från Data API v2. TRADE BUY/SELL och REDEEM; andra typer hoppas över.
+    Öppna: positioner med andelar kvar som inte är avgjorda (förlorade ligger kvar som
+    redeemable). Felmeddelanden får inte innehålla adressen (den står i URL:en)."""
+    try:
+        rows, _ = polymarket.fetch_all(http, "/activity", {"user": address, "limit": 500})
+        pos, _ = polymarket.fetch_all(http, "/positions", {"user": address, "limit": 500})
+    except requests.RequestException as e:
+        status = getattr(e.response, "status_code", None) or type(e).__name__
+        raise ValueError(f"Polymarkets Data API svarade inte ({status})") from None
+    kinds = {("TRADE", "BUY"): "buy", ("TRADE", "SELL"): "sell", ("REDEEM", ""): "settled"}
+    ev = sorted(
+        ((r["timestamp"], kinds[k], r.get("title") or None, float(r["usdc_size"]))
+         for r in rows if (k := (r.get("type"), r.get("side") or "")) in kinds),
+        key=lambda e: e[0],
+    )  # fmt: skip
+    return {
+        "spent_usd": round(sum(e[3] for e in ev if e[1] == "buy"), 2),
+        "back_usd": round(sum(e[3] for e in ev if e[1] != "buy"), 2),
+        "open": sum(p["current_size"] > 0 and not p.get("redeemable") for p in pos),
+        "events": [{"t": iso(t), "type": k, "title": ti, "usd": round(u, 2)} for t, k, ti, u in ev],
+    }
+
+
+def build(live, http=None, now=None, runs=(), db_path=None, robot=None, robot_address=None):
+    http = http or HttpClient()
     summary, equity, traders, latency = live_files(live, http)
     rows = [r for name, d in runs if (r := run_row(name, d, http))]
     live_run = next((name for name, d in runs if Path(d).resolve() == Path(live).resolve()), None)
@@ -195,6 +226,8 @@ def build(live, http=None, now=None, runs=(), db_path=None, robot=None):
     }  # fmt: skip
     if robot:
         out["robot.json"] = robot_file(robot)
+    elif robot_address:
+        out["robot.json"] = robot_api(robot_address, http)
     return out
 
 
@@ -226,7 +259,9 @@ def main(argv=None, http=None, now=None):
     ap.add_argument("--live", required=True)
     ap.add_argument("--run", action="append", default=[], metavar="NAME=DATADIR")
     ap.add_argument("--db")
-    ap.add_argument("--robot")
+    who = ap.add_mutually_exclusive_group()
+    who.add_argument("--robot")
+    who.add_argument("--robot-api", action="store_true")
     a = ap.parse_args(argv)
     runs = []
     for r in a.run:
@@ -234,8 +269,13 @@ def main(argv=None, http=None, now=None):
         if not sep:
             ap.error(f"--run ska vara NAME=DATADIR: {r}")
         runs.append((name, d))
+    address = None
+    if a.robot_api:
+        address = os.environ.get("POLYMARKET_WALLET_ADDRESS", "").strip()
+        if not address:
+            sys.exit("Stoppar, inget skrivet: POLYMARKET_WALLET_ADDRESS saknas (sätt den i .env)")
     try:
-        files = build(a.live, http, now, runs, a.db, a.robot)
+        files = build(a.live, http, now, runs, a.db, a.robot, address)
         check(files)
     except ValueError as e:
         sys.exit(f"Stoppar, inget skrivet: {e}")
