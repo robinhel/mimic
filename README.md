@@ -4,14 +4,13 @@ copycheck asks a simple question: can you make money by copying the trades of th
 
 Dashboard: https://robinhel.github.io/copycheck/
 
-<!-- Screenshot goes here. The file docs/screenshot.png will be added later. -->
-![copycheck dashboard](docs/screenshot.png)
+<!-- Add a screenshot of the dashboard here when docs/screenshot.png exists. -->
 
 ## Results
 
-The first test was a backtest. It copied Polymarket players onto matching Kalshi markets, with delays and Kalshi fees. Over 81,384 simulated trades it lost about 13%. That approach was dropped.
+The first test was a backtest. It copied Polymarket players onto matching Kalshi markets, with delays and Kalshi fees. It ran 81,384 simulated trades across 4 delays and 3 strategies. The main setup, a 2 minute delay and holding to settlement, returned about -13% after fees. That approach was dropped.
 
-The second test followed players live on Polymarket itself. The test ran from 16 to 23 November 2026 with paper money. It made about +3% on 35 buys, but only 11 of them were settled when the test ended.
+The second test followed players live on Polymarket itself. The test ran from 16 to 23 November 2026 with paper money. It made about +3% on 35 buys, but only 11 of them were settled when the test ended. The live ROI counts every buy from all followed players. Open buys are valued at the current market price.
 
 That is far too little data for a conclusion. A handful of settled markets can swing the result either way, and one week says nothing about how the players do over time. The honest answer so far is: not proven.
 
@@ -42,13 +41,21 @@ uv run copycheck --help
 Run the live paper test. DATADIR holds players.json with the players to follow:
 
 ```
-python scripts/pm_livetest.py run DATADIR
+uv run python scripts/pm_livetest.py run DATADIR
 ```
 
-Export data for the dashboard and run it locally:
+Export data for the dashboard. OUTDIR should be `dashboard/public/data`. Commit the files there, because GitHub Pages only shows what is committed:
 
 ```
-python scripts/export_dashboard.py OUTDIR --live DATADIR
+uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
+    --run NAME=DATADIR --db copycheck.db --robot ROBOTDIR
+```
+
+`--live` is the latest live test. If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. Without `--robot` the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.
+
+Run the dashboard locally:
+
+```
 cd dashboard && npm ci && npm run dev
 ```
 
