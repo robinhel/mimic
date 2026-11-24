@@ -1,128 +1,56 @@
 [
  {
-  "name": "Trader 1",
+  "name": "SineNooneEI",
   "source": "vår",
   "safe": true,
-  "copied": 6,
-  "settled": 3,
-  "roi_pct": 22.0,
-  "roi_fee_pct": 21.4
- },
- {
-  "name": "Trader 2",
-  "source": "vår",
-  "safe": true,
-  "copied": 5,
-  "settled": 2,
-  "roi_pct": -37.9,
-  "roi_fee_pct": -38.5
- },
- {
-  "name": "Trader 3",
-  "source": "leaderboard",
-  "safe": true,
-  "copied": 4,
-  "settled": 2,
-  "roi_pct": 27.6,
-  "roi_fee_pct": 27.0
- },
- {
-  "name": "Trader 4",
-  "source": "polkyo",
-  "safe": false,
-  "copied": 3,
+  "copied": 1,
   "settled": 1,
   "roi_pct": -100.0,
   "roi_fee_pct": -100.0
  },
  {
-  "name": "Trader 5",
+  "name": "CORGII",
   "source": "vår",
-  "safe": true,
-  "copied": 3,
+  "safe": false,
+  "copied": 6,
+  "settled": 6,
+  "roi_pct": -67.3,
+  "roi_fee_pct": -68.4
+ },
+ {
+  "name": "arjennnnn",
+  "source": "vår",
+  "safe": false,
+  "copied": 6,
+  "settled": 5,
+  "roi_pct": 7.3,
+  "roi_fee_pct": 6.7
+ },
+ {
+  "name": "TheReturnOfDarthMaul",
+  "source": "vår",
+  "safe": false,
+  "copied": 2,
+  "settled": 0,
+  "roi_pct": 5.1,
+  "roi_fee_pct": 4.5
+ },
+ {
+  "name": "Woaifacai",
+  "source": "vår",
+  "safe": false,
+  "copied": 7,
+  "settled": 7,
+  "roi_pct": 50.6,
+  "roi_fee_pct": 46.6
+ },
+ {
+  "name": "BrotherObama",
+  "source": "vår",
+  "safe": false,
+  "copied": 1,
   "settled": 1,
-  "roi_pct": 43.5,
-  "roi_fee_pct": 42.9
- },
- {
-  "name": "Trader 6",
-  "source": "leaderboard",
-  "safe": false,
-  "copied": 2,
-  "settled": 1,
-  "roi_pct": 11.7,
-  "roi_fee_pct": 11.1
- },
- {
-  "name": "Trader 7",
-  "source": "vår",
-  "safe": true,
-  "copied": 2,
-  "settled": 1,
-  "roi_pct": 39.5,
-  "roi_fee_pct": 38.9
- },
- {
-  "name": "Trader 8",
-  "source": "polkyo",
-  "safe": false,
-  "copied": 2,
-  "settled": 0,
-  "roi_pct": -4.2,
-  "roi_fee_pct": -4.8
- },
- {
-  "name": "Trader 9",
-  "source": "vår",
-  "safe": true,
-  "copied": 2,
-  "settled": 0,
-  "roi_pct": 8.9,
-  "roi_fee_pct": 8.3
- },
- {
-  "name": "Trader 10",
-  "source": "leaderboard",
-  "safe": false,
-  "copied": 2,
-  "settled": 0,
-  "roi_pct": 2.4,
-  "roi_fee_pct": 1.8
- },
- {
-  "name": "Trader 11",
-  "source": "vår",
-  "safe": false,
-  "copied": 1,
-  "settled": 0,
-  "roi_pct": -12.5,
-  "roi_fee_pct": -13.1
- },
- {
-  "name": "Trader 12",
-  "source": "polkyo",
-  "safe": false,
-  "copied": 1,
-  "settled": 0,
-  "roi_pct": 6.0,
-  "roi_fee_pct": 5.4
- },
- {
-  "name": "Trader 13",
-  "source": "vår",
-  "safe": false,
-  "copied": 1,
-  "settled": 0,
-  "roi_pct": 15.2,
-  "roi_fee_pct": 14.6
- },
- {
-  "name": "Trader 14",
-  "source": "vår",
-  "safe": false,
-  "copied": 1,
-  "settled": 0,
-  "roi_pct": -3.3,
-  "roi_fee_pct": -3.9
+  "roi_pct": -100.0,
+  "roi_fee_pct": -100.0
  }
 ]

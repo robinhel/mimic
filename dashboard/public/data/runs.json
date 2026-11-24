@@ -1,7 +1,47 @@
 [
-  { "name": "Kalshi backtest", "from": "2025-06-01", "to": "2026-09-30", "buys": 6782, "settled": 6782, "roi_pct": -11.4, "roi_fee_pct": -13.0 },
-  { "name": "test2", "from": "2026-10-05", "to": "2026-10-09", "buys": 18, "settled": 9, "roi_pct": -4.8, "roi_fee_pct": -6.2 },
-  { "name": "test8", "from": "2026-10-20", "to": "2026-10-27", "buys": 26, "settled": 12, "roi_pct": -1.1, "roi_fee_pct": -2.3 },
-  { "name": "test12", "from": "2026-11-04", "to": "2026-11-11", "buys": 31, "settled": 14, "roi_pct": 1.7, "roi_fee_pct": 0.8 },
-  { "name": "test15", "from": "2026-11-16", "to": "2026-11-23", "buys": 35, "settled": 11, "roi_pct": 3.6, "roi_fee_pct": 3.1 }
+ {
+  "name": "Kalshi backtest",
+  "from": "2026-09-16",
+  "to": "2026-11-10",
+  "buys": 1816,
+  "settled": 1783,
+  "roi_pct": null,
+  "roi_fee_pct": -13.2
+ },
+ {
+  "name": "Live test 1",
+  "from": "2026-11-15",
+  "to": "2026-11-16",
+  "buys": 9,
+  "settled": 6,
+  "roi_pct": 17.9,
+  "roi_fee_pct": 16.8
+ },
+ {
+  "name": "Live test 2 (fast poll)",
+  "from": "2026-11-15",
+  "to": "2026-11-16",
+  "buys": 13,
+  "settled": 10,
+  "roi_pct": 7.9,
+  "roi_fee_pct": 6.1
+ },
+ {
+  "name": "Live test 3",
+  "from": "2026-11-15",
+  "to": "2026-11-16",
+  "buys": 23,
+  "settled": 20,
+  "roi_pct": -8.5,
+  "roi_fee_pct": -10.6
+ },
+ {
+  "name": "Wide test",
+  "from": "2026-11-17",
+  "to": "2026-11-17",
+  "buys": 9,
+  "settled": 9,
+  "roi_pct": 2.8,
+  "roi_fee_pct": 0.0
+ }
 ]
