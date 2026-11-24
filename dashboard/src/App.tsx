@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import Results from "./components/Results";
 import { Badge, Stat } from "./components/ui";
 import { useData } from "./data";
 import { dateTime, int, pct, tone } from "./format";
@@ -55,14 +56,14 @@ export default function App() {
       </div>
 
       <nav className="sticky top-0 z-10 -mx-4 mt-8 border-b border-zinc-800 bg-zinc-950/90 px-4 backdrop-blur sm:mx-0 sm:px-0" aria-label="Sections">
-        <div className="flex gap-1 overflow-x-auto" role="tablist">
+        <div className="flex overflow-x-auto sm:gap-1" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`shrink-0 border-b-2 px-3 py-3 text-sm transition-colors ${
+              className={`shrink-0 border-b-2 px-2 py-3 text-[13px] sm:px-3 sm:text-sm transition-colors ${
                 tab === t.id ? "border-emerald-400 text-zinc-50" : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >
@@ -73,7 +74,7 @@ export default function App() {
       </nav>
 
       <main className="mt-6">
-        <p className="text-sm text-zinc-500">Coming soon.</p>
+        {tab === "results" ? <Results data={data} /> : <p className="text-sm text-zinc-500">Coming soon.</p>}
       </main>
     </Shell>
   );

@@ -5,4 +5,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
+  // Recharts makes one ~600 kB bundle; fine for a static page.
+  build: { chunkSizeWarningLimit: 900 },
 });
