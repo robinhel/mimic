@@ -1,7 +1,7 @@
 {
   "data": [
     {
-      "proxy_wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+      "proxy_wallet": "0x1111111111111111111111111111111111111111",
       "timestamp": 1794306829,
       "condition_id": "0x9b786700f51dc9540f016267a69245616f53e93563de3fc5a1ac3a16f66310c4",
       "type": "TRADE",
@@ -24,7 +24,7 @@
       "profile_image_optimized": ""
     },
     {
-      "proxy_wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+      "proxy_wallet": "0x1111111111111111111111111111111111111111",
       "timestamp": 1794306822,
       "condition_id": "0x9b786700f51dc9540f016267a69245616f53e93563de3fc5a1ac3a16f66310c4",
       "type": "TRADE",
@@ -47,7 +47,7 @@
       "profile_image_optimized": ""
     },
     {
-      "proxy_wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+      "proxy_wallet": "0x1111111111111111111111111111111111111111",
       "timestamp": 1794306051,
       "condition_id": "0x9b9c693020bd625462107ea7963bacfefe73e678dd0e001c2d11388395a3cc2e",
       "type": "TRADE",
@@ -70,7 +70,7 @@
       "profile_image_optimized": ""
     },
     {
-      "proxy_wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+      "proxy_wallet": "0x1111111111111111111111111111111111111111",
       "timestamp": 1794305841,
       "condition_id": "0x9b9c693020bd625462107ea7963bacfefe73e678dd0e001c2d11388395a3cc2e",
       "type": "TRADE",
@@ -93,7 +93,7 @@
       "profile_image_optimized": ""
     },
     {
-      "proxy_wallet": "0xf0318c32136c2db7fec88b84869aee6a1106c80c",
+      "proxy_wallet": "0x1111111111111111111111111111111111111111",
       "timestamp": 1794305718,
       "condition_id": "0x9b786700f51dc9540f016267a69245616f53e93563de3fc5a1ac3a16f66310c4",
       "type": "TRADE",
