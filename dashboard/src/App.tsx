@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import About from "./components/About";
 import HowItWorks from "./components/HowItWorks";
 import Robot from "./components/Robot";
 import Traders from "./components/Traders";
@@ -81,7 +82,7 @@ export default function App() {
         {tab === "how" && <HowItWorks data={data} />}
         {tab === "traders" && <Traders data={data} />}
         {tab === "robot" && <Robot data={data} />}
-        {tab === "about" && <p className="text-sm text-zinc-500">Coming soon.</p>}
+        {tab === "about" && <About />}
       </main>
     </Shell>
   );
