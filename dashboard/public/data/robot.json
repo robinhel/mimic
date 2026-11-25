@@ -1,0 +1,55 @@
+{
+ "spent_usd": 9.64,
+ "back_usd": 11.88,
+ "open": 0,
+ "events": [
+  {
+   "t": "2026-11-16T14:04:08Z",
+   "type": "buy",
+   "title": "Will there be no new be CEO of NVIDIA by December 31, 2028?",
+   "usd": 1.04
+  },
+  {
+   "t": "2026-11-16T14:04:19Z",
+   "type": "sell",
+   "title": "Will there be no new be CEO of NVIDIA by December 31, 2028?",
+   "usd": 0.92
+  },
+  {
+   "t": "2026-11-16T15:32:29Z",
+   "type": "buy",
+   "title": "Will there be no new be CEO of NVIDIA by December 31, 2028?",
+   "usd": 1.04
+  },
+  {
+   "t": "2026-11-16T15:32:44Z",
+   "type": "sell",
+   "title": "Will there be no new be CEO of NVIDIA by December 31, 2028?",
+   "usd": 0.95
+  },
+  {
+   "t": "2026-11-16T15:33:52Z",
+   "type": "buy",
+   "title": "Israel x Iran ceasefire continues through November 15?",
+   "usd": 4.99
+  },
+  {
+   "t": "2026-11-16T20:54:52Z",
+   "type": "buy",
+   "title": "Canadiens vs. Rangers",
+   "usd": 2.56
+  },
+  {
+   "t": "2026-11-17T03:43:26Z",
+   "type": "settled",
+   "title": "Canadiens vs. Rangers",
+   "usd": 5.0
+  },
+  {
+   "t": "2026-11-18T12:03:52Z",
+   "type": "settled",
+   "title": "Israel x Iran ceasefire continues through November 15?",
+   "usd": 5.01
+  }
+ ]
+}
