@@ -3,13 +3,13 @@
 #
 #   deploy/pi-install.sh pi@raspberrypi.local DATADIR ROBOTDIR DB
 #
-# DB är den stora databasen, till exempel ./copycheck.db.
+# DB är den stora databasen, till exempel ./mimic.db.
 # DATADIR har players.json, fills.jsonl och events.jsonl. ROBOTDIR har state.json.
 # Den stora databasen (8 GB) flyttas inte. I stället skrivs en liten seed.db med spelarnas
 # innehav: en rad per spelare och svar, med samma tabell som livetestet läser vid start.
 # .env kopieras aldrig: robotens nyckel läggs in för hand på Pi:n.
 set -euo pipefail
-HOST=$1 DATA=$2 ROBOT=$3 DB=${4:?"ange DB, till exempel ./copycheck.db"}
+HOST=$1 DATA=$2 ROBOT=$3 DB=${4:?"ange DB, till exempel ./mimic.db"}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -31,17 +31,17 @@ dst.commit()
 print(f"seed.db: {len(rows)} innehav för {len(wallets)} spelare")
 EOF
 
-ssh "$HOST" 'mkdir -p ~/copycheck ~/pm_livetest ~/pm_robot'
+ssh "$HOST" 'mkdir -p ~/mimic ~/pm_livetest ~/pm_robot'
 rsync -a --delete --exclude .venv --exclude .env --exclude '*.db' --exclude '.*_cache' \
-  --exclude __pycache__ "$REPO/" "$HOST:copycheck/"
-rsync -a "$TMP/seed.db" "$HOST:copycheck/seed.db"
+  --exclude __pycache__ "$REPO/" "$HOST:mimic/"
+rsync -a "$TMP/seed.db" "$HOST:mimic/seed.db"
 rsync -a "$DATA/players.json" "$DATA/fills.jsonl" "$DATA/events.jsonl" "$HOST:pm_livetest/"
 rsync -a "$ROBOT/state.json" "$HOST:pm_robot/"
 
 ssh "$HOST" bash -s <<'EOF'
 set -euo pipefail
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
-cd ~/copycheck && ~/.local/bin/uv sync --python python3
+cd ~/mimic && ~/.local/bin/uv sync --python python3
 curl -s https://polymarket.com/api/geoblock; echo
 # Användartjänster: ingen sudo behövs. linger gör att de startar när Pi:n startar.
 loginctl enable-linger "$USER"

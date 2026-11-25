@@ -1,12 +1,12 @@
 # Robotens torrkörning på Raspberry Pi:n. Installeras av deploy/pi-install.sh.
 # Inga riktiga order: --live läggs till först efter Robins ja.
 [Unit]
-Description=copycheck robot (torrkörning)
+Description=Mimic robot (torrkörning)
 After=pm-livetest.service
 
 [Service]
-WorkingDirectory=@HOME@/copycheck
-ExecStart=@HOME@/copycheck/.venv/bin/python scripts/pm_robot.py run @HOME@/pm_livetest @HOME@/pm_robot --bank 90
+WorkingDirectory=@HOME@/mimic
+ExecStart=@HOME@/mimic/.venv/bin/python scripts/pm_robot.py run @HOME@/pm_livetest @HOME@/pm_robot --bank 90
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

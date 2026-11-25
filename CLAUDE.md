@@ -1,4 +1,6 @@
-# CLAUDE.md – copycheck
+# CLAUDE.md – Mimic
+
+(tidigare copycheck)
 
 Läs `PLAN.md` först. Bygg **en fas i taget**, i ordning. Gå inte vidare förrän fasens "Klart när" är uppfyllt.
 

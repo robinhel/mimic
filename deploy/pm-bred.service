@@ -1,12 +1,12 @@
 # Brett livetest på Raspberry Pi:n: följer många spelare framåt, inga order.
 [Unit]
-Description=copycheck brett livetest (5 767 spelare, bara kedjan)
+Description=Mimic brett livetest (5 767 spelare, bara kedjan)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=@HOME@/copycheck
-ExecStart=@HOME@/copycheck/.venv/bin/python scripts/pm_livetest.py run @HOME@/pm_bred --db none
+WorkingDirectory=@HOME@/mimic
+ExecStart=@HOME@/mimic/.venv/bin/python scripts/pm_livetest.py run @HOME@/pm_bred --db none
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

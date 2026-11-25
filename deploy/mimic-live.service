@@ -1,19 +1,19 @@
 # Livetest (fas 6) som systemd-tjänst på VM:en. Bara läsning, ingen handel.
 # Installera:
-#   sudo cp deploy/copycheck-live.service /etc/systemd/system/
+#   sudo cp deploy/mimic-live.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now copycheck-live
-# Följ loggen: journalctl -u copycheck-live -f
+#   sudo systemctl enable --now mimic-live
+# Följ loggen: journalctl -u mimic-live -f
 [Unit]
-Description=copycheck livetest (pappershandel)
+Description=Mimic livetest (pappershandel)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=copycheck
-WorkingDirectory=/opt/copycheck
-ExecStart=/opt/copycheck/.venv/bin/copycheck live
+User=mimic
+WorkingDirectory=/opt/mimic
+ExecStart=/opt/mimic/.venv/bin/mimic live
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1
