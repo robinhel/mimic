@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Flyttar livetestet och robotens torrkörning till Raspberry Pi:n. Körs från Macen.
 #
-#   deploy/pi-install.sh robin@robot.local DATADIR ROBOTDIR [DB]
+#   deploy/pi-install.sh pi@raspberrypi.local DATADIR ROBOTDIR DB
 #
+# DB är den stora databasen, till exempel ./copycheck.db.
 # DATADIR har players.json, fills.jsonl och events.jsonl. ROBOTDIR har state.json.
 # Den stora databasen (8 GB) flyttas inte. I stället skrivs en liten seed.db med spelarnas
 # innehav: en rad per spelare och svar, med samma tabell som livetestet läser vid start.
 # .env kopieras aldrig: robotens nyckel läggs in för hand på Pi:n.
 set -euo pipefail
-HOST=$1 DATA=$2 ROBOT=$3 DB=${4:-/Volumes/SSD/copycheck.noindex/copycheck.db}
+HOST=$1 DATA=$2 ROBOT=$3 DB=${4:?"ange DB, till exempel ./copycheck.db"}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

@@ -1,0 +1,17 @@
+{
+ "name": "test15",
+ "from": "2026-11-16",
+ "to": "2026-11-23",
+ "start_usd": 100,
+ "rows": [
+  {"strategy": "Robot rules", "delay_s": 5, "end_usd": 102.80, "roi_pct": 2.8, "buys": 35, "sold": 8, "settled": 11, "open": 18},
+  {"strategy": "Robot rules", "delay_s": 30, "end_usd": 103.58, "roi_pct": 3.6, "buys": 35, "sold": 8, "settled": 11, "open": 18},
+  {"strategy": "Robot rules", "delay_s": 120, "end_usd": 102.96, "roi_pct": 3.0, "buys": 31, "sold": 7, "settled": 10, "open": 16},
+  {"strategy": "Trusted traders, every buy", "delay_s": 5, "end_usd": 105.04, "roi_pct": 5.0, "buys": 34, "sold": 8, "settled": 10, "open": 18},
+  {"strategy": "Trusted traders, every buy", "delay_s": 30, "end_usd": 104.82, "roi_pct": 4.8, "buys": 34, "sold": 8, "settled": 10, "open": 18},
+  {"strategy": "Trusted traders, every buy", "delay_s": 120, "end_usd": 102.96, "roi_pct": 3.0, "buys": 31, "sold": 7, "settled": 10, "open": 16},
+  {"strategy": "Only when several traders agree", "delay_s": 5, "end_usd": 97.67, "roi_pct": -2.3, "buys": 3, "sold": 0, "settled": 1, "open": 2},
+  {"strategy": "Only when several traders agree", "delay_s": 30, "end_usd": 97.66, "roi_pct": -2.3, "buys": 3, "sold": 0, "settled": 1, "open": 2},
+  {"strategy": "Only when several traders agree", "delay_s": 120, "end_usd": 99.83, "roi_pct": -0.2, "buys": 2, "sold": 0, "settled": 0, "open": 2}
+ ]
+}

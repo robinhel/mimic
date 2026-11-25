@@ -1,0 +1,18 @@
+{
+ "bank": 90,
+ "cash": 89.5,
+ "realized": 1.5,
+ "offset": 0,
+ "pos": {
+  "t9": {
+   "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "name": "Alice",
+   "cid": "c9",
+   "idx": 0,
+   "title": "Market 9",
+   "shares": 10,
+   "cost": 5.0,
+   "opened": 1780345600
+  }
+ }
+}

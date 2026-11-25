@@ -1,0 +1,35 @@
+{
+ "median_s": 18,
+ "max_s": 866,
+ "buckets": [
+  {
+   "label": "0–1 s",
+   "count": 0
+  },
+  {
+   "label": "1–2 s",
+   "count": 1
+  },
+  {
+   "label": "2–5 s",
+   "count": 6
+  },
+  {
+   "label": "5–15 s",
+   "count": 6
+  },
+  {
+   "label": "15–60 s",
+   "count": 10
+  },
+  {
+   "label": "1–5 min",
+   "count": 3
+  },
+  {
+   "label": "> 5 min",
+   "count": 7
+  }
+ ],
+ "price_diff_cent_median": 1.0
+}

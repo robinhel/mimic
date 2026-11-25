@@ -1,0 +1,56 @@
+[
+ {
+  "name": "SineNooneEI",
+  "source": "vår",
+  "safe": true,
+  "copied": 1,
+  "settled": 1,
+  "roi_pct": -100.0,
+  "roi_fee_pct": -100.0
+ },
+ {
+  "name": "CORGII",
+  "source": "vår",
+  "safe": false,
+  "copied": 6,
+  "settled": 6,
+  "roi_pct": -67.3,
+  "roi_fee_pct": -68.4
+ },
+ {
+  "name": "arjennnnn",
+  "source": "vår",
+  "safe": false,
+  "copied": 6,
+  "settled": 5,
+  "roi_pct": 7.3,
+  "roi_fee_pct": 6.7
+ },
+ {
+  "name": "TheReturnOfDarthMaul",
+  "source": "vår",
+  "safe": false,
+  "copied": 2,
+  "settled": 0,
+  "roi_pct": 5.1,
+  "roi_fee_pct": 4.5
+ },
+ {
+  "name": "Woaifacai",
+  "source": "vår",
+  "safe": false,
+  "copied": 7,
+  "settled": 7,
+  "roi_pct": 50.6,
+  "roi_fee_pct": 46.6
+ },
+ {
+  "name": "BrotherObama",
+  "source": "vår",
+  "safe": false,
+  "copied": 1,
+  "settled": 1,
+  "roi_pct": -100.0,
+  "roi_fee_pct": -100.0
+ }
+]
