@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from copycheck import db, kalshi, live
+from mimic import db, kalshi, live
 
 FIXTURES = Path(__file__).parent / "fixtures"
 BOOK = json.loads((FIXTURES / "kalshi_orderbook.json").read_text())

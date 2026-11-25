@@ -3,7 +3,7 @@ import json
 import pytest
 import requests
 
-from copycheck.http import HttpClient
+from mimic.http import HttpClient
 
 
 def resp(status, body=None, headers=None):

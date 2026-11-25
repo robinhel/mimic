@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from copycheck import polymarket
+from mimic import polymarket
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

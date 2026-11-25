@@ -1,4 +1,4 @@
-from copycheck import db, report
+from mimic import db, report
 
 
 def setup(trades):

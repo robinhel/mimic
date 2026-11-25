@@ -1,7 +1,7 @@
 [project]
-name = "copycheck"
+name = "mimic"
 version = "0.1.0"
-description = "Research tool that tests whether copying top Polymarket traders pays off after delays and fees."
+description = "Mimic: research tool that tests whether copying top Polymarket traders pays off after delays and fees."
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",
@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-copycheck = "copycheck.cli:main"
+mimic = "mimic.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]

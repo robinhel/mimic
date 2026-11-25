@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from copycheck import backtest, db
+from mimic import backtest, db
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DAY = 86400

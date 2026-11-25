@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copycheck import db
+from mimic import db
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -55,7 +55,7 @@ class RoutingClient:
 
 
 def test_catalog_hamtar_historik_och_live_utan_timserier():
-    from copycheck import cli
+    from mimic import cli
 
     conn = db.connect(":memory:")
     client = RoutingClient()
@@ -71,7 +71,7 @@ def test_catalog_hamtar_historik_och_live_utan_timserier():
 
 def test_catalog_slanger_gamla_marknader_fran_historiken():
     """/historical/markets ignorerar min_close_ts (lucka 47), så vi filtrerar själva."""
-    from copycheck import cli
+    from mimic import cli
 
     class OldClient(RoutingClient):
         def get_json(self, url, params=None):

@@ -30,7 +30,7 @@ class HttpClient:
     ):
         if session is None:
             session = requests.Session()
-            session.headers["User-Agent"] = "copycheck/0.1"
+            session.headers["User-Agent"] = "mimic/0.1"
         self.session = session
         self.max_retries = max_retries
         self.min_interval = DEFAULT_MIN_INTERVAL if min_interval is None else min_interval

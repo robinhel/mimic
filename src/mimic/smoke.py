@@ -1,7 +1,7 @@
 """Röktest: anropar varje endpoint en gång, sparar svaret i tests/fixtures/
 och jämför fälten med de som verifierades 2026-11-10.
 
-Kör: uv run python -m copycheck.smoke
+Kör: uv run python -m mimic.smoke
 """
 
 import json
@@ -9,8 +9,8 @@ import sys
 import time
 from pathlib import Path
 
-from copycheck import config
-from copycheck.http import HttpClient
+from mimic import config
+from mimic.http import HttpClient
 
 FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
 

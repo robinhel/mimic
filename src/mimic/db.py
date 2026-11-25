@@ -4,8 +4,8 @@ import json
 import re
 import sqlite3
 
-from copycheck import kalshi
-from copycheck.polymarket import price
+from mimic import kalshi
+from mimic.polymarket import price
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS traders (

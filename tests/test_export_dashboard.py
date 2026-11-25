@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from copycheck import db
+from mimic import db
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
 import export_dashboard as ex  # noqa: E402
@@ -79,7 +79,7 @@ def test_latency():
 
 
 def test_runs_med_kalshi_i_tidsordning(tmp_path):
-    path = tmp_path / "copycheck.db"
+    path = tmp_path / "mimic.db"
     conn = db.connect(path)
     for sid, ts in ((1, T - 40 * D), (2, T - 20 * D)):
         conn.execute(

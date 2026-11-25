@@ -14,8 +14,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from copycheck import polymarket
-from copycheck.http import HttpClient
+from mimic import polymarket
+from mimic.http import HttpClient
 
 sys.path.insert(0, str(Path(__file__).parent))
 from pm_livetest import BASE, SHORT, buy_fill, fee, read_jl, sell_fill  # noqa: E402

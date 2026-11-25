@@ -1,7 +1,7 @@
 """Skriver JSON-filerna till dashboarden (se kontraktet för dashboard/public/data/).
 
     python scripts/export_dashboard.py OUTDIR --live DATADIR [--run NAME=DATADIR ...]
-        [--db copycheck.db] [--robot ROBOTDIR | --robot-api]
+        [--db mimic.db] [--robot ROBOTDIR | --robot-api]
 
 --live: senaste livetestet (summary, equity, traders, latency). --run: en rad per testkörning
 i runs.json (mappar utan signaler hoppas över); live_run i summary är namnet på den --run som
@@ -28,8 +28,8 @@ from pathlib import Path
 
 import requests
 
-from copycheck import polymarket, report
-from copycheck.http import HttpClient
+from mimic import polymarket, report
+from mimic.http import HttpClient
 
 sys.path.insert(0, str(Path(__file__).parent))
 from pm_livetest import BASE, SHORT, buy_fill, outcomes, read_jl  # noqa: E402

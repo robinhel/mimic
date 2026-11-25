@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copycheck import cli, db
+from mimic import cli, db
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

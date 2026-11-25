@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from copycheck.fees import fee
+from mimic.fees import fee
 
 
 def test_exempel_fran_claude_md():

@@ -3,7 +3,7 @@
 import json
 import time
 
-from copycheck import db
+from mimic import db
 
 LEVELS = {"exact", "near", "related", "none"}
 SIDES = {"yes", "no"}
