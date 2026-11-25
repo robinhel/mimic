@@ -28,16 +28,26 @@ export default function App() {
   return (
     <Shell>
       <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm text-emerald-400">copycheck</span>
-          {s.sample && <Badge tone="amber">Example data</Badge>}
-          <span className="text-xs text-zinc-500">Updated {dateTime(s.generated_at)} UTC</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
+            <MimicMark />
+            <div className="leading-tight">
+              <span className="block text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">Mimic</span>
+              <span className="block text-xs text-balance text-emerald-300/80 sm:text-sm">
+                Copy the best Polymarket traders. Measure if it pays.
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {s.sample && <Badge tone="amber">Example data</Badge>}
+            <span className="text-xs text-zinc-500">Updated {dateTime(s.generated_at)} UTC</span>
+          </div>
         </div>
         <h1 className="max-w-3xl text-2xl font-semibold tracking-tight text-zinc-50 text-balance sm:text-4xl">
           Can you make money by copying the best Polymarket traders?
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-          copycheck follows top traders on-chain, copies their buys on paper against the live order book, and measures
+          Mimic follows top traders on-chain, copies their buys on paper against the live order book, and measures
           the result after fees and slippage. Built in Python. Read-only research.
         </p>
         {s.sample && (
@@ -101,9 +111,20 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       {children}
       <footer className="mt-16 border-t border-zinc-800 pt-6 text-xs text-zinc-500">
-        copycheck · research project, not financial advice ·{" "}
-        <a className="text-zinc-400 underline-offset-2 hover:underline" href="https://github.com/robinhel/copycheck">source on GitHub</a>
+        Mimic · research project, not financial advice ·{" "}
+        <a className="text-zinc-400 underline-offset-2 hover:underline" href="https://github.com/robinhel/mimic">source on GitHub</a>
       </footer>
     </div>
+  );
+}
+
+/** Two overlapping circles: a trader and its copy. */
+function MimicMark() {
+  return (
+    <svg viewBox="0 0 40 40" className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" aria-hidden="true">
+      <rect width="40" height="40" rx="10" className="fill-emerald-400/10" />
+      <circle cx="16" cy="20" r="8" className="fill-emerald-400" />
+      <circle cx="24" cy="20" r="8" className="fill-none stroke-emerald-400" strokeWidth="2.5" />
+    </svg>
   );
 }
