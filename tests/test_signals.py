@@ -1,4 +1,4 @@
-from copycheck import db, signals
+from mimic import db, signals
 
 MIN = 60
 

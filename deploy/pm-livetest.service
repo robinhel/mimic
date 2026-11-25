@@ -1,12 +1,12 @@
 # Livetest på Raspberry Pi:n, som användartjänst (systemctl --user). Bara läsning.
 [Unit]
-Description=copycheck livetest (Polymarket, blockkedjan)
+Description=Mimic livetest (Polymarket, blockkedjan)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=@HOME@/copycheck
-ExecStart=@HOME@/copycheck/.venv/bin/python scripts/pm_livetest.py run @HOME@/pm_livetest --db @HOME@/copycheck/seed.db
+WorkingDirectory=@HOME@/mimic
+ExecStart=@HOME@/mimic/.venv/bin/python scripts/pm_livetest.py run @HOME@/pm_livetest --db @HOME@/mimic/seed.db
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

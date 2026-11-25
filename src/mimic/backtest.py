@@ -6,9 +6,9 @@ from decimal import Decimal
 
 import requests
 
-from copycheck import kalshi
-from copycheck.fees import fee
-from copycheck.matching import kalshi_side
+from mimic import kalshi
+from mimic.fees import fee
+from mimic.matching import kalshi_side
 
 DELAYS = [0, 30, 120, 600]  # 0 = jämförelse utan fördröjning (lucka 30)
 STRATEGIES = ["A", "B", "A_cap"]  # A håll, B sälj med tradern, A_cap hoppa över om priset sprungit

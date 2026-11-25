@@ -1,7 +1,7 @@
 """Livetest på Polymarket med låtsaspengar. Följer valda spelare och sparar riktiga priser.
 Inga affärer och ingen inloggning: bara GET mot Polymarkets öppna API:er.
 
-    python scripts/pm_livetest.py run DATADIR [--db copycheck.db] [--poll 15]
+    python scripts/pm_livetest.py run DATADIR [--db mimic.db] [--poll 15]
     python scripts/pm_livetest.py report DATADIR
 
 DATADIR har players.json: [{"wallet", "name", "safe", "source"}], där source är "vår" (standard)
@@ -22,9 +22,9 @@ from pathlib import Path
 
 import requests
 
-from copycheck import config, polymarket
-from copycheck.http import HttpClient
-from copycheck.kalshi import iso_ts
+from mimic import config, polymarket
+from mimic.http import HttpClient
+from mimic.kalshi import iso_ts
 
 DATA = config.POLYMARKET_DATA_URL + "/v2"
 BOOK = "https://clob.polymarket.com/book"

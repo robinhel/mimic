@@ -24,7 +24,7 @@ POLYMARKET_DATA_URL = os.environ.get("POLYMARKET_DATA_URL", "https://data-api.po
 POLYMARKET_GAMMA_URL = os.environ.get("POLYMARKET_GAMMA_URL", "https://gamma-api.polymarket.com")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
-DB_PATH = os.environ.get("COPYCHECK_DB", "copycheck.db")
+DB_PATH = os.environ.get("MIMIC_DB") or os.environ.get("COPYCHECK_DB", "mimic.db")
 TRAIN_DAYS = 90
 TEST_DAYS = 60
 MIN_SIGNAL_USD = 250

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from copycheck import db, matching, polymarket
+from mimic import db, matching, polymarket
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GAMMA = json.loads((FIXTURES / "pm_gamma_markets.json").read_text())

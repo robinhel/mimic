@@ -1,4 +1,6 @@
-# copycheck – plan
+# Mimic – plan
+
+(tidigare copycheck)
 
 **Mål:** Ta reda på om det hade lönat sig att kopiera Polymarkets bästa traders på Kalshi, *med fördröjning och avgifter*. Inga riktiga pengar. Programmet läser bara data.
 
@@ -128,7 +130,7 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 - Hämta ~500 kandidater (topplistor `month` + `all`, både PNL och VOLUME)
 - Hämta deras aktivitet och stängda positioner till databasen
 - Botfilter (lucka 11)
-- **Klart när:** `copycheck collect` fyller tabellerna och kan köras igen utan dubbletter.
+- **Klart när:** `mimic collect` fyller tabellerna och kan köras igen utan dubbletter.
 
 ### Fas 2 – Kalshi-katalog
 - Hämta alla marknader (öppna + historiska) med regler och resultat
@@ -136,14 +138,14 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 
 ### Fas 3 – Matchning
 - Kandidatsökning → Groq-bedömning → spara i `matches`
-- `copycheck review` för granskning för hand
+- `mimic review` för granskning för hand
 - **Klart när:** träffsäkerheten för `exact` är mätt på minst 50 par.
 
 ### Fas 4 – Backtest
 - Bygg signaler (lucka 13–14)
 - Ranka traders på **träningsperioden** (default 90 dagar)
 - Simulera på **testperioden** (de 60 dagarna efter) för varje fördröjning × strategi
-- **Klart när:** `copycheck backtest` skriver resultat till `sim_trades`.
+- **Klart när:** `mimic backtest` skriver resultat till `sim_trades`.
 
 ### Fas 5 – Rapport → BESLUTSPUNKT
 - Tabell per trader, fördröjning, strategi och kategori: ROI, antal signaler, täckning, snitt-slippage
@@ -181,12 +183,12 @@ Varje fas ska fungera och vara testad innan nästa börjar.
 ## 5. Mappstruktur
 
 ```
-copycheck/
+mimic/
 ├── CLAUDE.md
 ├── PLAN.md
 ├── pyproject.toml
 ├── .env.example
-├── src/copycheck/
+├── src/mimic/
 │   ├── http.py          # gemensam klient: backoff, 429, loggning
 │   ├── polymarket.py    # bara v2-endpoints
 │   ├── kalshi.py        # live + historical, yes_ask-hjälpare

@@ -1,8 +1,11 @@
-# copycheck
+# Mimic
 
-copycheck asks a simple question: can you make money by copying the trades of the best Polymarket players, after delays and fees?
+Mimic asks a simple question: can you make money by copying the trades of the best Polymarket players, after delays and fees?
 
-Dashboard: https://robinhel.github.io/copycheck/
+Dashboard: https://robinhel.github.io/mimic/
+Source: https://github.com/robinhel/mimic
+
+The project was previously called copycheck.
 
 <!-- Add a screenshot of the dashboard here when docs/screenshot.png exists. -->
 
@@ -37,7 +40,7 @@ Install and look at the command line tool:
 
 ```
 uv sync
-uv run copycheck --help
+uv run mimic --help
 ```
 
 Run the live paper test. DATADIR holds players.json with the players to follow:
@@ -50,7 +53,7 @@ Export data for the dashboard. OUTDIR should be `dashboard/public/data`. Commit 
 
 ```
 uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
-    --run NAME=DATADIR --db copycheck.db --robot-api
+    --run NAME=DATADIR --db mimic.db --robot-api
 ```
 
 `--live` is the live test shown as the headline number on the dashboard, currently the largest one (live test 3). If a `--run` has the same folder, its name is shown as the title of the live run. Each `--run` adds one test run to the ROI chart, and a folder without signals is skipped. `--db` adds the Kalshi backtest. `--robot` adds the robot log. It must point to a folder where the robot has only run with `--live`, otherwise the export stops. `--robot-api` instead fetches the robot's real buys, sells and redeems from Polymarket's public Data API. It reads the robot's address only from `POLYMARKET_WALLET_ADDRESS` in your local `.env`, stops if it is missing, and never prints or writes the address. Skips exist only in the robot's own log, so they are not shown with `--robot-api`. `--robot` and `--robot-api` cannot be used together. Without either, the export removes an old `robot.json`. The export also stops if it finds a wallet address or a secret.

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from copycheck import kalshi
+from mimic import kalshi
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

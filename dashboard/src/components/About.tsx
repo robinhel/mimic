@@ -54,14 +54,14 @@ export default function About({ data }: { data: Data }) {
       </Card>
       <Card title="Not financial advice" className="md:col-span-2">
         <p className="text-sm leading-relaxed text-zinc-400">
-          copycheck is a research project. The live test trades on paper only; the robot buys with a small, capped amount to check the paper
+          Mimic is a research project. The live test trades on paper only; the robot buys with a small, capped amount to check the paper
           results against reality. Past results say little about the future, and prediction markets can lose you all of your stake.
           Nothing on this page is a recommendation to trade.
         </p>
         <p className="mt-3 text-sm text-zinc-400">
           Source code:{" "}
-          <a className="text-emerald-400 underline-offset-2 hover:underline" href="https://github.com/robinhel/copycheck">
-            github.com/robinhel/copycheck
+          <a className="text-emerald-400 underline-offset-2 hover:underline" href="https://github.com/robinhel/mimic">
+            github.com/robinhel/mimic
           </a>
         </p>
       </Card>

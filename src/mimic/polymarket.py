@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from copycheck import config
+from mimic import config
 
 BASE = config.POLYMARKET_DATA_URL + "/v2"
 FOUR = Decimal("0.0001")

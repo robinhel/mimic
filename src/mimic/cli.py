@@ -4,7 +4,7 @@ import argparse
 import logging
 import time
 
-from copycheck import (
+from mimic import (
     backtest,
     config,
     db,
@@ -16,7 +16,7 @@ from copycheck import (
     report,
     signals,
 )
-from copycheck.http import HttpClient
+from mimic.http import HttpClient
 
 LISTS = [("month", "PNL"), ("month", "VOLUME"), ("all", "PNL"), ("all", "VOLUME")]
 
@@ -139,7 +139,7 @@ def review(conn, ask=input, log=print, level="exact"):
 
 
 def main(argv=None) -> None:
-    p = argparse.ArgumentParser(prog="copycheck")
+    p = argparse.ArgumentParser(prog="mimic")
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("collect", help="hämta Polymarket-traders till databasen")
     c.add_argument("--per-list", type=int, default=150, help="traders per topplista (4 listor)")
@@ -167,7 +167,7 @@ def main(argv=None) -> None:
     lv.add_argument("--db", default=config.DB_PATH)
     lv.add_argument("--top", type=int, default=20)
     lv.add_argument("--wallets", nargs="*", help="plånböcker, annars de bästa på 90 dagar")
-    lv.add_argument("--backup", default="backups/copycheck-latest.db")
+    lv.add_argument("--backup", default="backups/mimic-latest.db")
     args = p.parse_args(argv)
 
     if args.cmd == "collect":

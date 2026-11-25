@@ -6,7 +6,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from copycheck import db, kalshi, polymarket
+from mimic import db, kalshi, polymarket
 
 log = logging.getLogger(__name__)
 LATE_AFTER = 120  # sekunder mellan affären och att vi såg den

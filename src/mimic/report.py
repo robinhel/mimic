@@ -111,7 +111,7 @@ def render(conn, now):
     total = summary(conn, "all")
     head = next((r for r in total if (r["delay"], r["strategy"]) == HEADLINE), None)
     when = datetime.fromtimestamp(now, UTC).astimezone(ZoneInfo("Europe/Stockholm"))
-    parts = [f"# copycheck: resultat\n\nSkapad {when:%Y-%m-%d %H:%M} svensk tid.\n"]
+    parts = [f"# Mimic: resultat\n\nSkapad {when:%Y-%m-%d %H:%M} svensk tid.\n"]
     if head:
         lo, hi = head["ci"]
         parts.append(

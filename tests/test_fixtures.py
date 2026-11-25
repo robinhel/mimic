@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from copycheck.smoke import check
+from mimic.smoke import check
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

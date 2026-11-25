@@ -1,4 +1,4 @@
-from copycheck import db, ranking
+from mimic import db, ranking
 
 DAY = 86400
 

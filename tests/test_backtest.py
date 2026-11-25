@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from copycheck import backtest, db
+from mimic import backtest, db
 
 FIXTURES = Path(__file__).parent / "fixtures"
 D = Decimal
