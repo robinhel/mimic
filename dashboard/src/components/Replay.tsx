@@ -1,16 +1,13 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { dateRange, dateTime, day, int, pct, tick, tone, usd } from "../format";
+import { dateRange, dateTime, int, pct, tone, usd } from "../format";
 import type { ReplayTrade, ReplayTrades } from "../types";
-import { Badge, Card, Stat } from "./ui";
+import { EquityChart, EquityHead, RoiBars, SmallSample, span } from "./charts";
+import { Badge, Card } from "./ui";
 
-const AXIS = { stroke: "#71717a", fontSize: 11 };
-const TIP = {
-  contentStyle: { background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 },
-  labelStyle: { color: "#a1a1aa" },
-};
 const DAY = 86400000;
 const SMALL = 50;
+// More traders than this: the bars show the best and worst half of it, the table below shows all.
+const BARS = 16;
 
 type Rule = "all" | "robot";
 interface Choice {
@@ -128,14 +125,8 @@ export default function Replay({ f }: { f: ReplayTrades }) {
   const sel = new Set(c.players);
   const capped = (f.capped ?? []).filter((i) => i >= 0 && i < f.players.length).map((i) => f.players[i].name);
 
-  const last = r.points.at(-1)?.y ?? 0;
-  const color = last >= 0 ? "#34d399" : "#fb7185";
-  const ticks: number[] = [];
-  if (r.points.length) {
-    const a = r.points[0].x, b = r.points.at(-1)!.x;
-    const step = Math.max(1, Math.ceil((b - a) / DAY / 8)) * DAY;
-    for (let d = Math.ceil(a / DAY) * DAY; d <= b; d += step) ticks.push(d);
-  }
+  const ranked = r.rows.flatMap((x) => (x.roi == null ? [] : [{ name: f.players[x.i].name, v: Math.round(x.roi * 10) / 10 }])).sort((a, b) => b.v - a.v);
+  const bars = ranked.length > BARS ? [...ranked.slice(0, BARS / 2), ...ranked.slice(-BARS / 2)] : ranked;
   const empty = c.players.length === 0 ? "Pick at least one trader to see how copying them would have gone." : r.picked.length === 0 ? "No copied buys for this choice. Try a longer period, more traders or Every buy." : null;
 
   return (
@@ -144,14 +135,12 @@ export default function Replay({ f }: { f: ReplayTrades }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="blue">Backtest, not live</Badge>
           {f.sample && <Badge tone="amber">Example data</Badge>}
-          {!empty && r.picked.length < SMALL && <Badge tone="amber">Small sample</Badge>}
         </div>
         {f.sample && <p>This tab shows made-up example data, not the real replay.</p>}
         <p>Players were picked today. Looking back at them favours those who already did well. See How we pick traders on the Traders tab.</p>
         <p>Prices are estimated from price history, not a real order book.</p>
         <p>Buys in markets that close within an hour are skipped, which drops most in-game sports buys.</p>
         {capped.length > 0 && <p>Older buys were cut for: {capped.join(", ")}.</p>}
-        {!empty && r.picked.length < SMALL && <p>Small sample: {buys(r.picked.length)}. Far too few to tell skill from luck.</p>}
       </div>
 
       <Card
@@ -233,84 +222,74 @@ export default function Replay({ f }: { f: ReplayTrades }) {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-            <Stat label="ROI after fees" compact value={pct(r.roi)} valueClass={tone(r.roi)} />
-            <Stat label="Result" compact value={usd(r.result, true)} valueClass={tone(r.result)} />
-            <Stat label="Buys" compact value={int(r.picked.length)} />
-            <Stat label="Settled" compact value={int(r.settled)} />
-            <Stat label="Sold" compact value={int(r.sold)} />
-            <Stat label="Still open" compact value={int(r.open)} />
-          </div>
-
-          <Card title="Cumulative result" sub={`USD, ${c.delay} s delay, ${dateRange(c.from, c.to)}. Each buy's result is counted at its buy time; open buys at today's price.`}>
-            <div className="h-56 sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={r.points} margin={{ top: 8, right: 8, bottom: 0, left: -4 }}>
-                  <defs>
-                    <linearGradient id="rp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={color} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="#27272a" vertical={false} />
-                  <XAxis dataKey="x" type="number" scale="time" domain={["dataMin", "dataMax"]} ticks={ticks} tickFormatter={(v: number) => day(new Date(v).toISOString())} {...AXIS} minTickGap={24} />
-                  <YAxis tickFormatter={(v: number) => tick(v, "$")} {...AXIS} width={56} />
-                  <ReferenceLine y={0} stroke="#52525b" strokeDasharray="4 4" />
-                  <Tooltip {...TIP} labelFormatter={(v) => `${dateTime(new Date(Number(v)).toISOString())} UTC`} formatter={(v) => [usd(Number(v), true), "Result"]} />
-                  <Area isAnimationActive={false} type="stepAfter" dataKey="y" stroke={color} strokeWidth={2} fill="url(#rp)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <Card title="Cumulative result" sub={`USD, $${f.stake_usd} per copied buy, after fees. ${c.delay} s delay, ${dateRange(c.from, c.to)}.`}>
+            <EquityHead points={r.points}>
+              <span>
+                ROI after fees <span className={`num font-semibold ${tone(r.roi)}`}>{pct(r.roi)}</span>
+              </span>
+              <span className="text-zinc-400">
+                {buys(r.picked.length)}, {int(r.settled)} settled, {int(r.sold)} sold, {int(r.open)} open
+              </span>
+            </EquityHead>
+            {r.picked.length < SMALL && (
+              <SmallSample>
+                Small sample: {buys(r.picked.length)}, {int(r.settled)} settled, {span(r.points)}. Far too few to tell skill from luck.
+              </SmallSample>
+            )}
+            <EquityChart points={r.points} id="rp" />
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card title="Per trader" sub="Click a column to sort.">
-              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-xs text-zinc-500">
-                    <tr>
-                      <th className="py-2 font-normal">Trader</th>
-                      <SortTh active={sortKey === "buys"} onClick={() => setSortKey("buys")}>Buys</SortTh>
-                      <SortTh active={sortKey === "result"} onClick={() => setSortKey("result")}>Result</SortTh>
-                      <SortTh active={sortKey === "roi"} onClick={() => setSortKey("roi")}>ROI</SortTh>
+          <Card
+            title="ROI per trader"
+            sub={`After fees. Red means the copies lost money.${bars.length < ranked.length ? ` Bars show the ${BARS / 2} best and ${BARS / 2} worst of ${ranked.length} traders; the table has all.` : ""}`}
+          >
+            <RoiBars bars={bars} cut={15} labelWidth={124} />
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs text-zinc-500">
+                  <tr>
+                    <th className="py-2 font-normal">Trader</th>
+                    <SortTh active={sortKey === "buys"} onClick={() => setSortKey("buys")}>Buys</SortTh>
+                    <SortTh active={sortKey === "result"} onClick={() => setSortKey("result")}>Result</SortTh>
+                    <SortTh active={sortKey === "roi"} onClick={() => setSortKey("roi")}>ROI</SortTh>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800">
+                  {rows.map((x) => (
+                    <tr key={x.i}>
+                      <td className="py-2 pr-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="text-zinc-200 [overflow-wrap:anywhere]">{f.players[x.i].name}</span>
+                          {f.players[x.i].safe && <Badge tone="green">trusted</Badge>}
+                        </div>
+                      </td>
+                      <td className="num py-2 pl-3 text-right">{int(x.buys)}</td>
+                      <td className={`num py-2 pl-3 text-right ${tone(x.result)}`}>{usd(x.result, true)}</td>
+                      <td className={`num py-2 pl-3 text-right font-medium ${tone(x.roi)}`}>{pct(x.roi)}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800">
-                    {rows.map((x) => (
-                      <tr key={x.i}>
-                        <td className="py-2 pr-2">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="text-zinc-200 [overflow-wrap:anywhere]">{f.players[x.i].name}</span>
-                            {f.players[x.i].safe && <Badge tone="green">trusted</Badge>}
-                          </div>
-                        </td>
-                        <td className="num py-2 pl-3 text-right">{int(x.buys)}</td>
-                        <td className={`num py-2 pl-3 text-right ${tone(x.result)}`}>{usd(x.result, true)}</td>
-                        <td className={`num py-2 pl-3 text-right font-medium ${tone(x.roi)}`}>{pct(x.roi)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-zinc-500">Click a column to sort the table.</p>
+          </Card>
 
-            <Card title="Latest 20 buys" sub="Newest first. Times in UTC.">
-              <ul className="divide-y divide-zinc-800">
-                {r.picked.slice(-20).reverse().map((tr, n) => (
-                  <li key={`${tr.t}-${tr.p}-${n}`} className="flex items-center gap-3 py-2 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-zinc-200">{tr.title}</div>
-                      <div className="truncate text-xs text-zinc-500">
-                        {dateTime(tr.t)} · {f.players[tr.p].name}
-                        {tr.state !== "settled" && ` · ${tr.state}`}
-                      </div>
+          <Card title="Latest 20 buys" sub="Newest first. Times in UTC.">
+            <ul className="divide-y divide-zinc-800">
+              {r.picked.slice(-20).reverse().map((tr, n) => (
+                <li key={`${tr.t}-${tr.p}-${n}`} className="flex items-center gap-3 py-2 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-zinc-200">{tr.title}</div>
+                    <div className="truncate text-xs text-zinc-500">
+                      {dateTime(tr.t)} · {f.players[tr.p].name}
+                      {tr.state !== "settled" && ` · ${tr.state}`}
                     </div>
-                    <span className={`num ${tone(tr.result[key])}`}>{usd(tr.result[key], true)}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </div>
+                  </div>
+                  <span className={`num ${tone(tr.result[key])}`}>{usd(tr.result[key], true)}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
         </>
       )}
 
