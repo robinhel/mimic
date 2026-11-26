@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from mimic import config, polymarket
 from mimic.fees import fee_usd
 from mimic.kalshi import iso_ts
-from mimic.signals import group_fills, to_signal
+from mimic.signals import group_fills
 
 DELAYS = [5, 30, 120]
 STAKE = 10.0
@@ -52,7 +52,8 @@ def market(m):
 
 
 def signals(fills, min_usd=config.MIN_SIGNAL_USD, window=config.SIGNAL_WINDOW):
-    """Köp av en spelare i en token, ihopslagna som i signals.build. Sorterade på tid."""
+    """Köp av en spelare i en token, ihopslagna som i signals.build. Sorterade på tid. Priset är
+    snittet av köpen fram till och med utlösningen, som i livetestet."""
     rows = sorted(
         ((f["p"], f["cid"], f["token"], f["idx"], f["price"], f["size"], f["usd"], f["ts"])
          for f in fills if f["side"] == "BUY"),
@@ -60,9 +61,13 @@ def signals(fills, min_usd=config.MIN_SIGNAL_USD, window=config.SIGNAL_WINDOW):
     )  # fmt: skip
     out = []
     for g in group_fills(rows, window):
-        if s := to_signal(g, min_usd):
-            out.append({"p": s[0], "cid": s[1], "token": s[2], "idx": s[3],
-                        "price": float(polymarket.price(s[4])), "t": s[7]})  # fmt: skip
+        total = val = size = 0.0
+        for r in g:
+            total, val, size = total + r[6], val + r[4] * r[5], size + r[5]
+            if total >= min_usd:
+                out.append({"p": r[0], "cid": r[1], "token": r[2], "idx": r[3],
+                            "price": float(polymarket.price(val / size)), "t": r[7]})  # fmt: skip
+                break
     return sorted(out, key=lambda s: (s["t"], s["p"]))
 
 
@@ -75,11 +80,6 @@ def skip_reason(s, m):
     if s["idx"] is None or s["idx"] >= len(m["prices"]):
         return "annat"
     return None
-
-
-def keep(s, m):
-    """Marknaden är känd, utfallet har ett pris och marknaden slutar inte inom en timme."""
-    return skip_reason(s, m) is None
 
 
 def entry(s, points, delay):
@@ -108,7 +108,8 @@ def sells(fills):
 
 
 def copy(price, xs, t, final, stake):
-    """(kostnad, resultat, andelar kvar) för `stake` dollar köpt till `price` vid tiden t."""
+    """(kostnad, resultat, andelar kvar) för `stake` dollar köpt till `price` vid tiden t.
+    Bara sälj efter t följs: kopian äger inget före sitt köp."""
     sh = stake / price
     cost, got = stake + fee_usd(sh, price), 0.0
     for ts, frac, p in xs:
@@ -120,25 +121,23 @@ def copy(price, xs, t, final, stake):
     return cost, got + sh * final - cost, sh
 
 
-def trades(fills, markets, history, chosen=None, delays=DELAYS, stake=STAKE,
-           min_usd=config.MIN_SIGNAL_USD, window=config.SIGNAL_WINDOW):  # fmt: skip
-    """Trades enligt kontraktet. `chosen`: de signaler som skrivs (standard alla). `others`
-    räknas mot alla signaler i fills, även de som inte skrivs."""
-    sigs = signals(fills, min_usd, window)
+def trades(fills, markets, history, sigs, chosen=None, delays=DELAYS, stake=STAKE):
+    """Trades enligt kontraktet. `sigs`: alla signaler i fills (från signals), `others` räknas
+    mot dem. `chosen`: de signaler som skrivs, standard alla i sigs som inte hoppas över."""
+    if chosen is None:
+        chosen = [s for s in sigs if skip_reason(s, markets.get(s["cid"])) is None]
     by_token = defaultdict(list)
     for s in sigs:
         by_token[s["token"]].append(s)
     xs = sells(fills)
     titles = {f["cid"]: f["title"] for f in fills if f.get("title")}
     out = []
-    for s in sigs if chosen is None else chosen:
-        m = markets.get(s["cid"])
-        if not keep(s, m):
-            continue
+    for s in chosen:
+        m = markets[s["cid"]]
         points = sorted(history.get(s["token"]) or [])
         cost, result, left = {}, {}, 0.0
         for d in delays:
-            c, r, left = copy(entry(s, points, d), xs.get((s["p"], s["token"]), []), s["t"],
+            c, r, left = copy(entry(s, points, d), xs.get((s["p"], s["token"]), []), s["t"] + d,
                               m["prices"][s["idx"]], stake)  # fmt: skip
             cost[str(d)], result[str(d)] = round(c, 2), round(r, 2)
         others = {o["p"] for o in by_token[s["token"]] if s["t"] - CONSENSUS <= o["t"] <= s["t"]}

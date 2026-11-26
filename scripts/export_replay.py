@@ -2,15 +2,17 @@
 
     python scripts/export_replay.py OUTFILE --players PLAYERS_JSON [--days 90] [--cache DIR]
 
-PLAYERS_JSON: [{"wallet", "name", "safe", "source"}] som i pm_livetest.py. Hämtar spelarnas affärer
-(Data API v2 /activity) från midnatt UTC för --days + 3 dagar sedan, så att innehav och "others"
-blir rätt, men skriver bara signaler från de senaste --days dagarna. Högst
---max-signals-per-player signaler per spelare (de nyaste). Marknaderna hämtas från Gamma i
-omgångar om 50, prishistoriken från CLOB en gång per token och tidsspann (högst 14 dagar per
-anrop). Räkningen finns i mimic.replay. Resultaten är
+PLAYERS_JSON: [{"wallet", "name", "safe", "source"}] som i pm_livetest.py. Perioden är --days
+kalenderdagar i UTC, med dagens datum som sista dag. Hämtar spelarnas affärer (Data API v2
+/activity) från 3 dagar före perioden, så att innehav och "others" blir rätt, men skriver bara
+signaler i perioden. Högst --max-signals-per-player signaler per spelare (de nyaste); spelare som
+kapades står i "capped". Skriver en rad per spelare när hämtningen är klar. Marknaderna hämtas
+från Gamma i omgångar om 50, prishistoriken från CLOB en gång per token och tidsspann (högst 14
+dagar per anrop). Räkningen finns i mimic.replay. Resultaten är
 uppskattade: priset efter fördröjningen kommer från en prishistorik med en punkt per minut.
 Alla svar sparas i --cache (standard .replay-cache/), så att en omkörning inte hämtar dem igen.
-Gamma för öppna marknader sparas per dag. Max cirka 5 anrop/s per värd.
+Gamma-svar gäller bara samma dag, så att marknader som stängt sedan dess kommer med.
+Max cirka 5 anrop/s per värd.
 Innan något skrivs letar programmet efter plånböcker och hemligheter och stoppar.
 """
 
@@ -46,7 +48,7 @@ class Cache:
         self.http, self.folder, self.today, self.calls = http, Path(folder), today, 0
 
     def get_json(self, url, params):
-        fresh = "gamma" in url and params.get("closed") == "false"  # öppna marknader: per dag
+        fresh = "gamma" in url  # marknader ändras (öppnas, stängs): gäller en dag
         key = json.dumps([url, sorted(params.items()), self.today if fresh else None])
         path = self.folder / (hashlib.sha256(key.encode()).hexdigest() + ".json")
         if path.exists():
@@ -82,20 +84,21 @@ def windows(times):
 
 
 def history(cache, sigs):
-    """token -> [(t, p)] för signalerna. Saknad historik ger spelarens pris."""
+    """(token -> [(t, p)], antal anrop som gav HTTP-fel). Saknad historik ger spelarens pris."""
     times = defaultdict(list)
     for s in sigs:
         times[s["token"]].append(s["t"])
-    out = defaultdict(list)
+    out, missing = defaultdict(list), 0
     for token, ts in times.items():
         for a, b in windows(ts):
             params = {"market": token, "startTs": a, "endTs": b, "fidelity": 1}
             try:
                 body = cache.get_json(HISTORY, params)
             except requests.HTTPError:
+                missing += 1
                 continue
             out[token] += [(x["t"], x["p"]) for x in body.get("history") or []]
-    return out
+    return out, missing
 
 
 def cap(sigs, n):
@@ -113,19 +116,30 @@ def cap(sigs, n):
 
 
 def build(players, cache, now, days, max_signals):
-    start = (now // DAY - days) * DAY
-    fills = []
+    start = (now // DAY - days + 1) * DAY  # --days dagar med dagens datum som sista
+    who = names(players)
+    t0 = time.monotonic()
+    fills, every = [], []  # every: alla signaler, även före perioden (för "others")
     for i, p in enumerate(players):
         rows, _ = polymarket.activity(cache, p["wallet"], start - replay.CONSENSUS)
-        fills += [replay.fill(r, i) for r in rows if r.get("type", "TRADE") == "TRADE"]
-    sigs = [s for s in replay.signals(fills) if s["t"] >= start]
+        mine = [replay.fill(r, i) for r in rows if r.get("type", "TRADE") == "TRADE"]
+        fills += mine
+        found = replay.signals(mine)  # signaler är per spelare: samma som för alla fills
+        every += found
+        n = sum(s["t"] >= start for s in found)
+        took = time.monotonic() - t0
+        print(f"spelare {i + 1}/{len(players)} klar: {who[i]['name']}, {n} signaler, "
+              f"{cache.calls} anrop hittills, {took:.0f} s", flush=True)  # fmt: skip
+    every.sort(key=lambda s: (s["t"], s["p"]))
+    sigs = [s for s in every if s["t"] >= start]
     cids = sorted({s["cid"] for s in sigs})
     markets = {m["conditionId"]: replay.market(m) for m in polymarket.gamma_markets(cache, cids)}
-    skipped = Counter(r for s in sigs if (r := replay.skip_reason(s, markets.get(s["cid"]))))
-    chosen, capped = cap([s for s in sigs if replay.keep(s, markets.get(s["cid"]))], max_signals)
-    trades = replay.trades(fills, markets, history(cache, chosen), chosen)
-    who = names(players)
-    stats = {"signals": len(sigs), "skipped": skipped,
+    reasons = [(s, replay.skip_reason(s, markets.get(s["cid"]))) for s in sigs]
+    skipped = Counter(r for _, r in reasons if r)
+    chosen, capped = cap([s for s, r in reasons if r is None], max_signals)
+    hist, missing = history(cache, chosen)
+    trades = replay.trades(fills, markets, hist, every, chosen)
+    stats = {"signals": len(sigs), "skipped": skipped, "missing": missing,
              "capped": [who[p]["name"] for p in sorted(capped)]}  # fmt: skip
     return stats, {
         "generated_at": iso(now),
@@ -135,6 +149,7 @@ def build(players, cache, now, days, max_signals):
         "delays": replay.DELAYS,
         "stake_usd": int(replay.STAKE),
         "players": who,
+        "capped": sorted(capped),
         "trades": trades,
     }
 
@@ -144,7 +159,8 @@ def summary(players, stats, doc, size, calls, took):
     capped = ", ".join(stats["capped"]) or "inga"
     return (f"{len(players)} spelare, {stats['signals']} signaler, {len(doc['trades'])} köp, "
             f"{size} byte ({size / 1e6:.1f} MB), {calls} anrop, {took:.0f} s.\n"
-            f"Bortfall: {skipped}. Kapade spelare: {capped}.")  # fmt: skip
+            f"Bortfall: {skipped}. Kapade spelare: {capped}. "
+            f"Saknad prishistorik: {stats['missing']}.")  # fmt: skip
 
 
 def main(argv=None, http=None, now=None):
