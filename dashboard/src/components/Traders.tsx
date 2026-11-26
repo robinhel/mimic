@@ -8,6 +8,32 @@ export default function Traders({ data }: { data: Data }) {
 
   return (
     <div className="grid gap-4">
+      <Card title="How we pick traders">
+        <div className="grid gap-3 text-sm leading-relaxed text-zinc-400">
+          <p>The traders were picked by the project's analysis agent, not by hand.</p>
+          <p>
+            29 come from Polymarket's public leaderboards (all-time and month, by profit and by volume), fetched on 10 Nov 2026. Each of
+            their buys was copied on paper with $10 between 13 Jun and 16 Sep 2026, selling when they sold. Only traders with at least 20
+            settled positions were kept (39). The 29 with a positive copy ROI were followed.
+          </p>
+          <p>The 8 trusted are the ones where even the lower 5 % bound of a bootstrap of that ROI was above zero.</p>
+          <p>19 come from Polyrank's Copy Engine list: 25 were listed, 4 marked "In-play" were removed and 2 could not be found.</p>
+          <div className="grid gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
+            <div>
+              <Badge tone="amber">Biased pick</Badge>
+            </div>
+            <p>Leaderboards show people who already made money, so the pick is biased.</p>
+            <p>
+              A test on 461 randomly picked traders outside the leaderboards, copied by the same rule, returned {pct(-3.1)} (17 Nov 2026). A
+              later, larger final test on 3,848 traders also came out negative.
+            </p>
+            <p>
+              Traders from Polyrank's list returned about {pct(4, 0)} with a 2-minute delay and {pct(1, 0)} with a 10-minute delay, measured
+              from day 15 to day 90.
+            </p>
+          </div>
+        </div>
+      </Card>
       <Card
         title="Traders followed"
         sub={`${s.players} traders followed, ${s.players_trusted} trusted. The paper result counts every buy from all followed traders. The list shows the ${rows.length} traders with copied buys.`}

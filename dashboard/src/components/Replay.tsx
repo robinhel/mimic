@@ -147,7 +147,7 @@ export default function Replay({ f }: { f: ReplayTrades }) {
           {!empty && r.picked.length < SMALL && <Badge tone="amber">Small sample</Badge>}
         </div>
         {f.sample && <p>This tab shows made-up example data, not the real replay.</p>}
-        <p>Players were picked today. Looking back at them favours those who already did well.</p>
+        <p>Players were picked today. Looking back at them favours those who already did well. See How we pick traders on the Traders tab.</p>
         <p>Prices are estimated from price history, not a real order book.</p>
         <p>Buys in markets that close within an hour are skipped, which drops most in-game sports buys.</p>
         {capped.length > 0 && <p>Older buys were cut for: {capped.join(", ")}.</p>}
