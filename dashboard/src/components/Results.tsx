@@ -1,27 +1,13 @@
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { dateRange, dateTime, day, int, pct, tick, tone, usd } from "../format";
+import { dateRange, int, pct, tone, usd } from "../format";
 import type { Data, Replay } from "../types";
+import { EquityChart, EquityHead, RoiBars, SmallSample, span } from "./charts";
 import { Badge, Card, Stat } from "./ui";
-
-const AXIS = { stroke: "#71717a", fontSize: 11 };
-const TIP = {
-  contentStyle: { background: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 },
-  labelStyle: { color: "#a1a1aa" },
-};
 
 export default function Results({ data }: { data: Data }) {
   const { equity, runs, summary } = data;
   const points = equity.map((p) => ({ x: Date.parse(p.t), y: p.pnl_usd }));
-  const last = equity.at(-1)?.pnl_usd ?? 0;
-  const low = Math.min(0, ...equity.map((p) => p.pnl_usd));
   const live = runs.find((r) => r.name === summary.live_run);
   const bars = runs.map((r) => ({ name: r.name, v: r.roi_fee_pct ?? r.roi_pct ?? 0, run: r }));
-  const DAY = 86400000;
-  const ticks: number[] = [];
-  if (points.length) for (let d = Math.ceil(points[0].x / DAY) * DAY; d <= points.at(-1)!.x; d += DAY) ticks.push(d);
-  const color = last >= 0 ? "#34d399" : "#fb7185";
-  const hours = points.length ? (points.at(-1)!.x - points[0].x) / 3600000 : 0;
-  const span = hours <= 24 ? "within one day" : `over ${Math.ceil(hours / 24)} days`;
 
   return (
     <div className="grid gap-4">
@@ -29,65 +15,19 @@ export default function Results({ data }: { data: Data }) {
         title="Paper portfolio, largest live run"
         sub={`Cumulative result in USD, $10 per copied buy from all followed traders, after fees and slippage.${summary.live_run ? ` ${summary.live_run}${live ? `, ${dateRange(live.from, live.to)}` : ""}.` : ""}`}
       >
-        <div className="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <span>
-            Result <span className={`num font-semibold ${tone(last)}`}>{usd(last, true)}</span>
-          </span>
-          <span>
-            Worst point <span className={`num font-semibold ${tone(low)}`}>{usd(low, true)}</span>
-          </span>
+        <EquityHead points={points}>
           <span className="text-zinc-400">
             {summary.live_buys} buys, {summary.live_settled} settled
           </span>
-        </div>
-        <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
-          Small sample: {summary.live_buys} buys, {summary.live_settled} settled, {span}. Far too few to tell skill from luck.
-        </p>
-        <div className="h-56 sm:h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-              <defs>
-                <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="#27272a" vertical={false} />
-              <XAxis dataKey="x" type="number" scale="time" domain={["dataMin", "dataMax"]} ticks={ticks} tickFormatter={(v: number) => day(new Date(v).toISOString())} {...AXIS} minTickGap={24} />
-              <YAxis tickFormatter={(v: number) => tick(v, "$")} {...AXIS} width={48} />
-              <ReferenceLine y={0} stroke="#52525b" strokeDasharray="4 4" />
-              <Tooltip
-                {...TIP}
-                labelFormatter={(v) => `${dateTime(new Date(Number(v)).toISOString())} UTC`}
-                formatter={(v) => [usd(Number(v), true), "Result"]}
-              />
-              <Area isAnimationActive={false} type="stepAfter" dataKey="y" stroke={color} strokeWidth={2} fill="url(#eq)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">
-          Each buy's result is counted at its buy time. Open buys are valued at today's market price until the market settles.
-        </p>
+        </EquityHead>
+        <SmallSample>
+          Small sample: {summary.live_buys} buys, {summary.live_settled} settled, {span(points)}. Far too few to tell skill from luck.
+        </SmallSample>
+        <EquityChart points={points} id="eq" />
       </Card>
 
       <Card title="ROI per test run" sub="After fees. Red means the copies lost money. The Kalshi backtest is why the project moved to Polymarket.">
-        <div style={{ height: Math.max(180, bars.length * 44) }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={bars} layout="vertical" margin={{ top: 0, right: 52, bottom: 0, left: 0 }}>
-              <CartesianGrid stroke="#27272a" horizontal={false} />
-              <XAxis type="number" tickFormatter={(v: number) => tick(v, "", "%")} {...AXIS} />
-              <YAxis type="category" dataKey="name" width={104} {...AXIS} tick={{ fill: "#d4d4d8", fontSize: 12 }} />
-              <ReferenceLine x={0} stroke="#71717a" />
-              <Tooltip {...TIP} cursor={{ fill: "#27272a" }} formatter={(v) => [pct(Number(v)), "ROI after fees"]} />
-              <Bar isAnimationActive={false} dataKey="v" radius={3} maxBarSize={22} minPointSize={1}>
-                {bars.map((b) => (
-                  <Cell key={b.name} fill={b.v === 0 ? "#71717a" : b.v > 0 ? "#34d399" : "#fb7185"} />
-                ))}
-                <LabelList dataKey="v" content={BarLabel} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <RoiBars bars={bars} />
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-zinc-500">
@@ -195,15 +135,5 @@ function ReplayCard({ r, median }: { r: Replay; median: number | null }) {
         </p>
       </Card>
     </>
-  );
-}
-
-// Value label just right of the bar's right edge (for losses: right of the zero line), so it never hits the axis labels.
-function BarLabel(p: { x?: unknown; y?: unknown; width?: unknown; height?: unknown; value?: unknown }) {
-  const x = Number(p.x), w = Number(p.width), y = Number(p.y), h = Number(p.height), v = Number(p.value);
-  return (
-    <text x={Math.max(x, x + w) + 6} y={y + h / 2} dy={4} fill="#d4d4d8" fontSize={11}>
-      {pct(v)}
-    </text>
   );
 }
