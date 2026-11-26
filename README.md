@@ -60,6 +60,15 @@ uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
 
 `replay.json` is not made by the export. It is written by hand from the test15 result, and the export leaves it alone.
 
+Export data for the Replay tab. It replays the followed players afterwards from Polymarket's public history: every buy of 250 $ or more is copied with 10 $ after 5, 30 and 120 seconds, and the copy follows the player's sells. PLAYERS is a players.json like the one for the live test:
+
+```
+uv run python scripts/export_replay.py dashboard/public/data/replay_trades.json \
+    --players PLAYERS --days 90
+```
+
+The results are estimates. The price after the delay comes from a price history with about one point per minute, and the copy never pays less than the player did. Answers are cached in `.replay-cache/` (change with `--cache`), so a second run is fast. The export stops before writing if it finds a wallet address or a secret. The `replay_trades.json` in the repo is made-up sample data with `sample: true`.
+
 Run the dashboard locally:
 
 ```
