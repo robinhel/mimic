@@ -1,8 +1,10 @@
 import json
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
+import requests
 
 from mimic import replay
 from mimic.fees import fee_usd
@@ -31,7 +33,7 @@ def market(closed=True, prices=(1.0, 0.0), end=T + 10 * D):
 
 
 def run(fills, markets=None, history=None):
-    return replay.trades(fills, markets or market(), history or {})
+    return replay.trades(fills, markets or market(), history or {}, replay.signals(fills))
 
 
 def test_avgift_samma_som_livetestet():
@@ -66,9 +68,17 @@ def test_delsalj_sedan_avgorande():
 
 def test_allt_salt():
     # Halva à 0.60: 10 andelar, 6.00 - 0.17. Resten à 0.70: 7.00 - 0.15. 12.68 - 10.35 = 2.33.
-    fills = [buy(0, T), sell(0, T + 60, 0.6, 300), sell(0, T + 120, 0.7, 300)]
+    fills = [buy(0, T), sell(0, T + 200, 0.6, 300), sell(0, T + 300, 0.7, 300)]
     [t] = run(fills, market(prices=(0, 1)))
-    assert t["result"]["5"] == 2.33 and t["state"] == "sold"
+    assert t["result"] == {"5": 2.33, "30": 2.33, "120": 2.33} and t["state"] == "sold"
+
+
+def test_salj_fore_kopians_kop_foljs_inte():
+    # Allt säljs à 0.90 efter 60 s: 18.00 - 0.13 = 17.87 - 10.35 = 7.52 för 5 och 30 s.
+    # Kopian efter 120 s har inte köpt än och behåller sina 20 andelar till förlust.
+    [t] = run([buy(0, T), sell(0, T + 60, 0.9, 600)], market(prices=(0, 1)))
+    assert t["result"] == {"5": 7.52, "30": 7.52, "120": -10.35}
+    assert all(c == 10.35 for c in t["cost"].values())
 
 
 def test_salj_fore_signalen_raknas_inte():
@@ -99,6 +109,13 @@ def test_signal_fran_flera_kop_inom_tio_minuter():
     assert t["trader_price"] == 0.4615  # (200 + 100) / 650
 
 
+def test_spelarens_pris_bara_fram_till_utlosningen():
+    # Köpet à 0.90 efter utlösningen ligger i samma grupp men räknas inte in i snittet.
+    fills = [buy(0, T, 0.5, 400), buy(0, T + 300, 0.4, 250), buy(0, T + 400, 0.9, 1000)]
+    [t] = run(fills)
+    assert t["trader_price"] == 0.4615
+
+
 def test_others_inom_tre_dagar_men_inte_fyra():
     fills = [buy(0, T), buy(1, T - 3 * D), buy(2, T - 4 * D), buy(3, T - D, token="999")]
     trades = {t["p"]: t for t in run(fills)}
@@ -113,8 +130,8 @@ def test_others_inom_tre_dagar_men_inte_fyra():
 class FakeApi:
     """Data API v2, Gamma och CLOB prices-history från fixturerna i tests/fixtures/replay/."""
 
-    def __init__(self, title=None):
-        self.calls, self.title = [], title
+    def __init__(self, title=None, history_error=False):
+        self.calls, self.title, self.history_error = [], title, history_error
 
     def get_json(self, url, params):
         self.calls.append((url, dict(params)))
@@ -132,14 +149,16 @@ class FakeApi:
             return [m for m in markets if str(m["closed"]).lower() == params["closed"]
                     and m["conditionId"] in params["condition_ids"]]  # fmt: skip
         assert url == ex.HISTORY and params["fidelity"] == 1
+        if self.history_error:
+            raise requests.HTTPError("404")
         return json.loads((FIX / "prices.json").read_text()).get(params["market"], {"history": []})
 
 
-def export(tmp_path, http, days="7", extra=()):
+def export(tmp_path, http, days="7", extra=(), now=T + 2 * D):
     out = tmp_path / "out" / "replay_trades.json"
     argv = [str(out), "--players", str(FIX / "players.json"), "--days", days,
             "--cache", str(tmp_path / "cache"), *extra]  # fmt: skip
-    ex.main(argv, http=http, now=T + 2 * D)
+    ex.main(argv, http=http, now=now)
     return out
 
 
@@ -147,10 +166,11 @@ def test_export_enligt_kontraktet(tmp_path, capsys):
     out = export(tmp_path, FakeApi())
     doc = json.loads(out.read_text())
     assert doc["sample"] is False and doc["generated_at"] == "2026-11-20T11:06:40Z"
-    assert (doc["from"], doc["to"]) == ("2026-11-13", "2026-11-20")
+    assert (doc["from"], doc["to"]) == ("2026-11-14", "2026-11-20")  # 7 dagar med slutdagen
     assert doc["delays"] == [5, 30, 120] and doc["stake_usd"] == 10
     assert doc["players"] == [{"name": "Alice", "safe": True}, {"name": "Trader 1", "safe": False},
                               {"name": "Trader 2", "safe": False}]  # fmt: skip
+    assert doc["capped"] == []
     # B en dag före Alice, C:s marknad slutar inom en timme.
     b, a = doc["trades"]
     assert (b["p"], b["others"], b["trader_price"]) == (1, [], 0.4)
@@ -160,11 +180,20 @@ def test_export_enligt_kontraktet(tmp_path, capsys):
     printed = capsys.readouterr().out
     assert "3 spelare, 3 signaler, 2 köp" in printed and "0x" not in printed
     assert "Bortfall: slutar inom 1 h 1." in printed and "Kapade spelare: inga." in printed
+    assert "Saknad prishistorik: 0." in printed
+    assert "spelare 1/3 klar: Alice, 1 signaler, " in printed
+    assert "spelare 3/3 klar: Trader 2, " in printed
+
+
+def test_saknad_prishistorik_raknas(tmp_path, capsys):
+    doc = json.loads(export(tmp_path, FakeApi(history_error=True)).read_text())
+    assert doc["trades"][1]["cost"]["30"] == 10.35  # spelarens pris
+    assert "Saknad prishistorik: 1." in capsys.readouterr().out
 
 
 def test_kop_fore_perioden_ger_others_men_skrivs_inte(tmp_path):
-    # Två dagar: perioden börjar 2026-11-18 00:00. B:s köp dagen före hämtas men skrivs inte.
-    doc = json.loads(export(tmp_path, FakeApi(), days="2").read_text())
+    # Tre dagar: perioden börjar 2026-11-18 00:00. B:s köp dagen före hämtas men skrivs inte.
+    doc = json.loads(export(tmp_path, FakeApi(), days="3").read_text())
     [a] = doc["trades"]
     assert (a["p"], a["others"], doc["from"]) == (0, [1], "2026-11-18")
 
@@ -173,7 +202,7 @@ def test_max_signaler_per_spelare(tmp_path, capsys):
     doc = json.loads(
         export(tmp_path, FakeApi(), extra=["--max-signals-per-player", "0"]).read_text()
     )
-    assert doc["trades"] == []
+    assert doc["trades"] == [] and doc["capped"] == [0, 1]
     assert "Kapade spelare: Alice, Trader 1." in capsys.readouterr().out
 
 
@@ -215,12 +244,38 @@ def test_cachen_ateranvands(tmp_path):
     assert again.calls == []
 
 
+GAMMA = "https://gamma-api.polymarket.com/markets"
+
+
+class Counting:
+    def __init__(self):
+        self.n = 0
+
+    def get_json(self, url, params):
+        self.n += 1
+        return []
+
+
+def test_gamma_sparas_hogst_en_dag(tmp_path):
+    # Även stängda: en marknad som stängt efter första körningen ska komma med dagen efter.
+    api = Counting()
+    for closed in ("true", "false"):
+        params = {"closed": closed, "condition_ids": ["c1"]}
+        for today in ("2026-11-20", "2026-11-20", "2026-11-21"):
+            ex.Cache(api, tmp_path, today).get_json(GAMMA, params)
+    assert api.n == 4
+    hist = {"market": "111", "startTs": 1, "endTs": 2, "fidelity": 1}
+    for today in ("2026-11-20", "2026-11-21"):
+        ex.Cache(api, tmp_path, today).get_json(ex.HISTORY, hist)
+    assert api.n == 5  # prishistorik ändras inte i efterhand
+
+
 def test_activity_med_cursor_och_start(tmp_path):
     api = FakeApi()
     export(tmp_path, api)
     act = [p for u, p in api.calls if "data-api" in u]
     assert [p.get("cursor") for p in act if p["user"].startswith("0xa")] == [None, "c2"]
-    assert all(p["type"] == "TRADE" and p["start"] == (T + 2 * D) // D * D - 10 * D for p in act)
+    assert all(p["type"] == "TRADE" and p["start"] == (T + 2 * D) // D * D - 9 * D for p in act)
 
 
 def test_lackkontrollen_stoppar_innan_nagot_skrivs(tmp_path):
@@ -231,7 +286,9 @@ def test_lackkontrollen_stoppar_innan_nagot_skrivs(tmp_path):
 
 def test_exempelfilen():
     doc = json.loads(SAMPLE.read_text())
-    assert doc["sample"] is True and doc["delays"] == [5, 30, 120]
+    assert doc["sample"] is True and doc["delays"] == [5, 30, 120] and doc["capped"] == []
+    span = datetime.fromisoformat(doc["to"]) - datetime.fromisoformat(doc["from"])
+    assert span == timedelta(days=89)  # 90 dagar med slutdagen
     n = len(doc["players"])
     assert 6 <= n <= 10 and 250 <= len(doc["trades"]) <= 350
     for t in doc["trades"]:
