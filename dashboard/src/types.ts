@@ -77,6 +77,30 @@ export interface Replay {
   rows: ReplayRow[];
 }
 
+// replay_trades.json: every replayed copy buy, so the Replay tab can pick players, period and delay.
+export interface ReplayTrade {
+  p: number;
+  t: string;
+  title: string;
+  trader_price: number;
+  others: number[];
+  state: "settled" | "sold" | "open";
+  cost: Record<string, number>;
+  result: Record<string, number>;
+}
+
+export interface ReplayTrades {
+  generated_at: string;
+  sample: boolean;
+  from: string;
+  to: string;
+  delays: number[];
+  stake_usd: number;
+  players: { name: string; safe: boolean }[];
+  capped?: number[]; // players whose oldest buys were cut by the export (missing in older files)
+  trades: ReplayTrade[];
+}
+
 export interface Data {
   summary: Summary;
   runs: Run[];
@@ -85,4 +109,5 @@ export interface Data {
   latency: Latency;
   robot: Robot | null;
   replay: Replay | null;
+  replayTrades: ReplayTrades | null;
 }

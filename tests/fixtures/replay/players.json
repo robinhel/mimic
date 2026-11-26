@@ -1,0 +1,20 @@
+[
+ {
+  "wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "name": "Alice",
+  "safe": true,
+  "source": "v\u00e5r"
+ },
+ {
+  "wallet": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "name": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "safe": false,
+  "source": "v\u00e5r"
+ },
+ {
+  "wallet": "0xcccccccccccccccccccccccccccccccccccccccc",
+  "name": "",
+  "safe": false,
+  "source": "polkyo"
+ }
+]

@@ -1,6 +1,7 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import About from "./components/About";
 import HowItWorks from "./components/HowItWorks";
+import Replay from "./components/Replay";
 import Robot from "./components/Robot";
 import Traders from "./components/Traders";
 import Results from "./components/Results";
@@ -10,6 +11,7 @@ import { dateTime, int, pct, tone } from "./format";
 
 const TABS = [
   { id: "results", label: "Results" },
+  { id: "replay", label: "Replay" },
   { id: "how", label: "How it works" },
   { id: "traders", label: "Traders" },
   { id: "robot", label: "Robot" },
@@ -19,11 +21,36 @@ type TabId = (typeof TABS)[number]["id"];
 
 export default function App() {
   const { data, error } = useData();
-  const [tab, setTab] = useState<TabId>("results");
+  const [tab, setTab] = useState<TabId>(() => (window.location.hash.startsWith("#replay") ? "replay" : "results"));
+  // A pasted #replay link in an open page remounts Replay so it reads the new choice.
+  const [hashKey, setHashKey] = useState(0);
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash.startsWith("#replay")) {
+        setTab("replay");
+        setHashKey((k) => k + 1);
+      }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  // No replay file: the page falls back to Results, so drop a #replay link from the address bar.
+  useEffect(() => {
+    if (data && !data.replayTrades && window.location.hash.startsWith("#replay")) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
+  }, [data]);
 
   if (error) return <Shell><p className="text-rose-300">Could not load data: {error}</p></Shell>;
   if (!data) return <Shell><p className="text-zinc-400">Loading…</p></Shell>;
   const s = data.summary;
+  const tabs = TABS.filter((t) => t.id !== "replay" || data.replayTrades);
+  const current: TabId = tab === "replay" && !data.replayTrades ? "results" : tab;
+  const pick = (id: TabId) => {
+    // Only the Replay tab keeps its choice in the hash.
+    if (id !== "replay") window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    setTab(id);
+  };
 
   return (
     <Shell>
@@ -79,14 +106,14 @@ export default function App() {
 
       <nav className="sticky top-0 z-10 -mx-4 mt-8 border-b border-zinc-800 bg-zinc-950/90 px-4 backdrop-blur sm:mx-0 sm:px-0" aria-label="Sections">
         <div className="flex overflow-x-auto sm:gap-1" role="tablist">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => setTab(t.id)}
+              aria-selected={current === t.id}
+              onClick={() => pick(t.id)}
               className={`shrink-0 border-b-2 px-1.5 py-3 text-[13px] sm:px-3 sm:text-sm transition-colors ${
-                tab === t.id ? "border-emerald-400 text-zinc-50" : "border-transparent text-zinc-400 hover:text-zinc-200"
+                current === t.id ? "border-emerald-400 text-zinc-50" : "border-transparent text-zinc-400 hover:text-zinc-200"
               }`}
             >
               {t.label}
@@ -96,11 +123,12 @@ export default function App() {
       </nav>
 
       <main className="mt-6">
-        {tab === "results" && <Results data={data} />}
-        {tab === "how" && <HowItWorks data={data} />}
-        {tab === "traders" && <Traders data={data} />}
-        {tab === "robot" && <Robot data={data} />}
-        {tab === "about" && <About data={data} />}
+        {current === "results" && <Results data={data} />}
+        {current === "replay" && data.replayTrades && <Replay key={hashKey} f={data.replayTrades} />}
+        {current === "how" && <HowItWorks data={data} />}
+        {current === "traders" && <Traders data={data} />}
+        {current === "robot" && <Robot data={data} />}
+        {current === "about" && <About data={data} />}
       </main>
     </Shell>
   );
