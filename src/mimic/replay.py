@@ -66,11 +66,20 @@ def signals(fills, min_usd=config.MIN_SIGNAL_USD, window=config.SIGNAL_WINDOW):
     return sorted(out, key=lambda s: (s["t"], s["p"]))
 
 
+def skip_reason(s, m):
+    """Varför signalen inte räknas, eller None om den räknas."""
+    if m is None:
+        return "saknar Gamma"
+    if m["end"] and m["end"] - s["t"] < SHORT:
+        return "slutar inom 1 h"
+    if s["idx"] is None or s["idx"] >= len(m["prices"]):
+        return "annat"
+    return None
+
+
 def keep(s, m):
     """Marknaden är känd, utfallet har ett pris och marknaden slutar inte inom en timme."""
-    if m is None or s["idx"] is None or s["idx"] >= len(m["prices"]):
-        return False
-    return not (m["end"] and m["end"] - s["t"] < SHORT)
+    return skip_reason(s, m) is None
 
 
 def entry(s, points, delay):
@@ -111,8 +120,10 @@ def copy(price, xs, t, final, stake):
     return cost, got + sh * final - cost, sh
 
 
-def trades(fills, markets, history, delays=DELAYS, stake=STAKE,
+def trades(fills, markets, history, chosen=None, delays=DELAYS, stake=STAKE,
            min_usd=config.MIN_SIGNAL_USD, window=config.SIGNAL_WINDOW):  # fmt: skip
+    """Trades enligt kontraktet. `chosen`: de signaler som skrivs (standard alla). `others`
+    räknas mot alla signaler i fills, även de som inte skrivs."""
     sigs = signals(fills, min_usd, window)
     by_token = defaultdict(list)
     for s in sigs:
@@ -120,7 +131,7 @@ def trades(fills, markets, history, delays=DELAYS, stake=STAKE,
     xs = sells(fills)
     titles = {f["cid"]: f["title"] for f in fills if f.get("title")}
     out = []
-    for s in sigs:
+    for s in sigs if chosen is None else chosen:
         m = markets.get(s["cid"])
         if not keep(s, m):
             continue

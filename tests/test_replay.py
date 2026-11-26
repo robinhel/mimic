@@ -135,10 +135,10 @@ class FakeApi:
         return json.loads((FIX / "prices.json").read_text()).get(params["market"], {"history": []})
 
 
-def export(tmp_path, http, days="7"):
+def export(tmp_path, http, days="7", extra=()):
     out = tmp_path / "out" / "replay_trades.json"
     argv = [str(out), "--players", str(FIX / "players.json"), "--days", days,
-            "--cache", str(tmp_path / "cache")]  # fmt: skip
+            "--cache", str(tmp_path / "cache"), *extra]  # fmt: skip
     ex.main(argv, http=http, now=T + 2 * D)
     return out
 
@@ -158,7 +158,47 @@ def test_export_enligt_kontraktet(tmp_path, capsys):
     assert a["cost"]["5"] == 10.35 and a["result"]["5"] == -6.41  # delsälj à 0.80, sedan förlust
     assert a["cost"]["30"] == 10.34 and a["result"]["30"] == -6.55  # 0.52 efter 30 s
     printed = capsys.readouterr().out
-    assert "3 spelare" in printed and "0x" not in printed
+    assert "3 spelare, 3 signaler, 2 köp" in printed and "0x" not in printed
+    assert "Bortfall: slutar inom 1 h 1." in printed and "Kapade spelare: inga." in printed
+
+
+def test_kop_fore_perioden_ger_others_men_skrivs_inte(tmp_path):
+    # Två dagar: perioden börjar 2026-11-18 00:00. B:s köp dagen före hämtas men skrivs inte.
+    doc = json.loads(export(tmp_path, FakeApi(), days="2").read_text())
+    [a] = doc["trades"]
+    assert (a["p"], a["others"], doc["from"]) == (0, [1], "2026-11-18")
+
+
+def test_max_signaler_per_spelare(tmp_path, capsys):
+    doc = json.loads(
+        export(tmp_path, FakeApi(), extra=["--max-signals-per-player", "0"]).read_text()
+    )
+    assert doc["trades"] == []
+    assert "Kapade spelare: Alice, Trader 1." in capsys.readouterr().out
+
+
+def test_kapar_nyaste_forst():
+    sigs = [{"p": 0, "t": 3}, {"p": 0, "t": 1}, {"p": 0, "t": 2}, {"p": 1, "t": 5}]
+    kept, capped = ex.cap(sigs, 2)
+    assert kept == [{"p": 0, "t": 2}, {"p": 0, "t": 3}, {"p": 1, "t": 5}] and capped == {0}
+
+
+def test_prisfonster_slas_ihop_och_delas():
+    a, b = ex.BEFORE, ex.AFTER
+    assert ex.windows([T + 3600, T]) == [[T - a, T + 3600 + b]]  # nära: ett anrop
+    assert ex.windows([T, T + 2 * D]) == [[T - a, T + b], [T + 2 * D - a, T + 2 * D + b]]
+    days = [T + i * D // 2 for i in range(40)]  # var 12:e timme i 20 dagar: två anrop
+    [w1, w2] = ex.windows(days)
+    assert w1[1] - w1[0] <= ex.SPAN and w2[1] == days[-1] + b and w2[0] - w1[1] < D
+
+
+def test_en_prishamtning_per_token(tmp_path):
+    # B (dagen före) och Alice köper i token 111: ett anrop som täcker båda. C hoppas över.
+    api = FakeApi()
+    export(tmp_path, api)
+    hist = [p for u, p in api.calls if u == ex.HISTORY]
+    assert hist == [{"market": "111", "startTs": T - D - ex.BEFORE, "endTs": T + ex.AFTER,
+                     "fidelity": 1}]  # fmt: skip
 
 
 def test_ingen_0x_i_utdata(tmp_path):
@@ -180,7 +220,7 @@ def test_activity_med_cursor_och_start(tmp_path):
     export(tmp_path, api)
     act = [p for u, p in api.calls if "data-api" in u]
     assert [p.get("cursor") for p in act if p["user"].startswith("0xa")] == [None, "c2"]
-    assert all(p["type"] == "TRADE" and p["start"] == (T + 2 * D) // D * D - 7 * D for p in act)
+    assert all(p["type"] == "TRADE" and p["start"] == (T + 2 * D) // D * D - 10 * D for p in act)
 
 
 def test_lackkontrollen_stoppar_innan_nagot_skrivs(tmp_path):
