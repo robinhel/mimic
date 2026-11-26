@@ -1,0 +1,100 @@
+{
+ "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": [
+  {
+   "data": [
+    {
+     "proxy_wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "timestamp": 1795000000,
+     "condition_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+     "type": "TRADE",
+     "size": 600,
+     "usdc_size": 300.000107,
+     "transaction_hash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+     "price": 0.5000001785,
+     "token_id": "111",
+     "side": "BUY",
+     "outcome_index": 0,
+     "title": "Canadiens vs. Rangers",
+     "outcome": "Yes"
+    }
+   ],
+   "pagination": {
+    "has_more": true,
+    "next_cursor": "c2"
+   }
+  },
+  {
+   "data": [
+    {
+     "proxy_wallet": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "timestamp": 1795003600,
+     "condition_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+     "type": "TRADE",
+     "size": 150,
+     "usdc_size": 120.0,
+     "transaction_hash": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "price": 0.8,
+     "token_id": "111",
+     "side": "SELL",
+     "outcome_index": 0,
+     "title": "Canadiens vs. Rangers",
+     "outcome": "Yes"
+    }
+   ],
+   "pagination": {
+    "has_more": false,
+    "next_cursor": null
+   }
+  }
+ ],
+ "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": [
+  {
+   "data": [
+    {
+     "proxy_wallet": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "timestamp": 1794913600,
+     "condition_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+     "type": "TRADE",
+     "size": 1000,
+     "usdc_size": 400.0,
+     "transaction_hash": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+     "price": 0.4,
+     "token_id": "111",
+     "side": "BUY",
+     "outcome_index": 0,
+     "title": "Canadiens vs. Rangers",
+     "outcome": "Yes"
+    }
+   ],
+   "pagination": {
+    "has_more": false,
+    "next_cursor": null
+   }
+  }
+ ],
+ "0xcccccccccccccccccccccccccccccccccccccccc": [
+  {
+   "data": [
+    {
+     "proxy_wallet": "0xcccccccccccccccccccccccccccccccccccccccc",
+     "timestamp": 1795000100,
+     "condition_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
+     "type": "TRADE",
+     "size": 1000,
+     "usdc_size": 300.0,
+     "transaction_hash": "0x9999999999999999999999999999999999999999999999999999999999999999",
+     "price": 0.3,
+     "token_id": "222",
+     "side": "BUY",
+     "outcome_index": 0,
+     "title": "Short game",
+     "outcome": "Yes"
+    }
+   ],
+   "pagination": {
+    "has_more": false,
+    "next_cursor": null
+   }
+  }
+ ]
+}

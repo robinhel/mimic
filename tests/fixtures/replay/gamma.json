@@ -1,0 +1,20 @@
+[
+ {
+  "conditionId": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "question": "Canadiens vs. Rangers",
+  "endDate": "2026-11-20T03:00:00Z",
+  "closed": true,
+  "outcomes": "[\"Canadiens\", \"Rangers\"]",
+  "outcomePrices": "[\"0\", \"1\"]",
+  "clobTokenIds": "[\"111\", \"112\"]"
+ },
+ {
+  "conditionId": "0x2222222222222222222222222222222222222222222222222222222222222222",
+  "question": "Short game",
+  "endDate": "2026-11-18T11:23:20Z",
+  "closed": false,
+  "outcomes": "[\"Yes\", \"No\"]",
+  "outcomePrices": "[\"0.3\", \"0.7\"]",
+  "clobTokenIds": "[\"222\", \"223\"]"
+ }
+]
