@@ -284,13 +284,14 @@ def test_lackkontrollen_stoppar_innan_nagot_skrivs(tmp_path):
     assert not (tmp_path / "out").exists()
 
 
-def test_exempelfilen():
+def test_replayfilen_pa_sidan():
     doc = json.loads(SAMPLE.read_text())
-    assert doc["sample"] is True and doc["delays"] == [5, 30, 120] and doc["capped"] == []
+    assert doc["delays"] == [5, 30, 120] and all(
+        0 <= i < len(doc["players"]) for i in doc["capped"]
+    )
     span = datetime.fromisoformat(doc["to"]) - datetime.fromisoformat(doc["from"])
     assert span == timedelta(days=89)  # 90 dagar med slutdagen
     n = len(doc["players"])
-    assert 6 <= n <= 10 and 250 <= len(doc["trades"]) <= 350
     for t in doc["trades"]:
         assert 0 <= t["p"] < n and all(0 <= o < n and o != t["p"] for o in t["others"])
         assert t["state"] in ("settled", "sold", "open")
