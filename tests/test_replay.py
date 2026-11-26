@@ -17,8 +17,9 @@ T, D = 1795000000, 86400  # 2026-11-18T11:06:40Z
 
 
 def buy(p, ts, price=0.5, size=600, token="111", cid="c1"):
+    title = "Canadiens vs. Rangers"
     return {"p": p, "token": token, "cid": cid, "idx": 0, "side": "BUY", "price": price,
-            "size": size, "usd": price * size, "ts": ts, "title": "Canadiens vs. Rangers"}  # fmt: skip
+            "size": size, "usd": price * size, "ts": ts, "title": title}  # fmt: skip
 
 
 def sell(p, ts, price, size, token="111"):
