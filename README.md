@@ -19,6 +19,12 @@ A third check, test15, was not live. A script went back over 16 to 23 November 2
 
 That is far too little data for a conclusion. A handful of settled markets can swing the result either way, and live tests that ran for a day or two, plus one week of replay, say nothing about how the players do over time. The honest answer so far is: not proven.
 
+## How the traders were picked
+
+The traders were picked by the project's analysis agent, not by hand. 29 come from Polymarket's public leaderboards (all-time and month, by profit and by volume), fetched on 10 Nov 2026. Each of their buys was copied on paper with $10 between 13 Jun and 16 Sep 2026, selling when they sold. Only traders with at least 20 settled positions were kept (39), and the 29 with a positive copy ROI were followed. The 8 trusted are the ones where even the lower 5% bound of a bootstrap of that ROI was above zero. 19 more come from Polyrank's Copy Engine list: 25 were listed, 4 marked "In-play" were removed and 2 could not be found.
+
+Warning: leaderboards show people who already made money, so the pick is biased. A test on 461 randomly picked traders outside the leaderboards, copied by the same rule, returned -3.1% (17 Nov 2026). A later, larger final test on 3,848 traders also came out negative. Traders from Polyrank's list returned about +4% with a 2-minute delay and +1% with a 10-minute delay, measured from day 15 to day 90.
+
 ## How it works
 
 - Build a ranking of Polymarket players from their past closed positions, and filter out bots and market makers.
