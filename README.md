@@ -60,7 +60,7 @@ uv run python scripts/export_dashboard.py dashboard/public/data --live DATADIR \
 
 `replay.json` is not made by the export. It is written by hand from the test15 result, and the export leaves it alone.
 
-Export data for the Replay tab. It replays the followed players afterwards from Polymarket's public history: every buy of 250 $ or more is copied with 10 $ after 5, 30 and 120 seconds, and the copy follows the player's sells. PLAYERS is a players.json like the one for the live test:
+Export data for the Replay tab. It replays the followed players afterwards from Polymarket's public history. A player's buys in the same answer less than 10 minutes apart are merged, and they count once they add up to 250 $ or more. Each such buy is copied with 10 $ after 5, 30 and 120 seconds, and the copy follows the player's sells after its own buy. The period is `--days` calendar days in UTC, ending today. PLAYERS is a players.json like the one for the live test:
 
 ```
 uv run python scripts/export_replay.py dashboard/public/data/replay_trades.json \
@@ -68,6 +68,13 @@ uv run python scripts/export_replay.py dashboard/public/data/replay_trades.json 
 ```
 
 The results are estimates. The price after the delay comes from a price history with about one point per minute, and the copy never pays less than the player did. Answers are cached in `.replay-cache/` (change with `--cache`), so a second run is fast. The export stops before writing if it finds a wallet address or a secret. The `replay_trades.json` in the repo is made-up sample data with `sample: true`.
+
+Known limits of the replay:
+
+- Prices are estimated from the price history, not from a real order book.
+- Buys in markets that close within 1 hour are skipped. That drops most in-game sports buys.
+- What a player held before the fetched window is unknown, so a partial sell can be counted as a full sell.
+- The robot-like rule is simplified: it copies repeat buys too, and the robot's caps and bank are not modelled.
 
 Run the dashboard locally:
 

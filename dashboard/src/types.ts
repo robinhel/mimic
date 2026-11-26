@@ -97,6 +97,7 @@ export interface ReplayTrades {
   delays: number[];
   stake_usd: number;
   players: { name: string; safe: boolean }[];
+  capped?: number[]; // players whose oldest buys were cut by the export (missing in older files)
   trades: ReplayTrade[];
 }
 

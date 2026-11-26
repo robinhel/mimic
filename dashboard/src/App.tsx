@@ -34,6 +34,12 @@ export default function App() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
+  // No replay file: the page falls back to Results, so drop a #replay link from the address bar.
+  useEffect(() => {
+    if (data && !data.replayTrades && window.location.hash.startsWith("#replay")) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
+  }, [data]);
 
   if (error) return <Shell><p className="text-rose-300">Could not load data: {error}</p></Shell>;
   if (!data) return <Shell><p className="text-zinc-400">Loading…</p></Shell>;

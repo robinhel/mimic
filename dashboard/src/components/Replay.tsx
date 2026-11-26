@@ -47,11 +47,13 @@ function parseHash(hash: string, f: ReplayTrades): Choice {
   return { players, from, to, delay, rule };
 }
 
+const buys = (n: number) => `${int(n)} ${n === 1 ? "buy" : "buys"}`;
+
 function toHash(c: Choice): string {
   return `#replay?p=${c.players.join(",")}&from=${c.from}&to=${c.to}&d=${c.delay}&r=${c.rule}`;
 }
 
-// Robot rules: a trusted trader's every buy; others only when another followed trader bought the same answer before.
+// Robot-like rule: a trusted trader's every buy; others only when another followed trader bought the same answer before.
 function passes(tr: ReplayTrade, rule: Rule, safe: boolean[]): boolean {
   return rule === "all" || safe[tr.p] || tr.others.length > 0;
 }
@@ -124,6 +126,7 @@ export default function Replay({ f }: { f: ReplayTrades }) {
   const shown = order.filter((i) => !q || f.players[i].name.toLowerCase().includes(q));
   const trusted = f.players.flatMap((p, i) => (p.safe ? [i] : []));
   const sel = new Set(c.players);
+  const capped = (f.capped ?? []).filter((i) => i >= 0 && i < f.players.length).map((i) => f.players[i].name);
 
   const last = r.points.at(-1)?.y ?? 0;
   const color = last >= 0 ? "#34d399" : "#fb7185";
@@ -146,7 +149,9 @@ export default function Replay({ f }: { f: ReplayTrades }) {
         {f.sample && <p>This tab shows made-up example data, not the real replay.</p>}
         <p>Players were picked today. Looking back at them favours those who already did well.</p>
         <p>Prices are estimated from price history, not a real order book.</p>
-        {!empty && r.picked.length < SMALL && <p>Small sample: {r.picked.length} buys. Far too few to tell skill from luck.</p>}
+        <p>Buys in markets that close within an hour are skipped, which drops most in-game sports buys.</p>
+        {capped.length > 0 && <p>Older buys were cut for: {capped.join(", ")}.</p>}
+        {!empty && r.picked.length < SMALL && <p>Small sample: {buys(r.picked.length)}. Far too few to tell skill from luck.</p>}
       </div>
 
       <Card
@@ -180,7 +185,7 @@ export default function Replay({ f }: { f: ReplayTrades }) {
                     <input type="checkbox" checked={sel.has(i)} onChange={() => toggle(i)} className="accent-emerald-400" />
                     <span className="min-w-0 truncate text-zinc-200">{f.players[i].name}</span>
                     {f.players[i].safe && <Badge tone="green">trusted</Badge>}
-                    <span className="num ml-auto text-xs text-zinc-500">{int(counts[i])} buys</span>
+                    <span className="num ml-auto text-xs text-zinc-500">{buys(counts[i])}</span>
                   </label>
                 </li>
               ))}
@@ -211,11 +216,11 @@ export default function Replay({ f }: { f: ReplayTrades }) {
             </div>
             <div>
               <div className="text-xs text-zinc-400">Rule</div>
-              <Segmented value={c.rule} options={[{ value: "all", label: "Every buy" }, { value: "robot", label: "Robot rules" }]} onChange={(rule) => set({ rule })} />
+              <Segmented value={c.rule} options={[{ value: "all", label: "Every buy" }, { value: "robot", label: "Robot-like rule" }]} onChange={(rule) => set({ rule })} />
               <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                 {c.rule === "all"
                   ? "Copy every buy from the ticked traders."
-                  : "Like the robot: copy every buy from trusted traders. Copy other traders only when another followed trader bought the same answer in the 3 days before, even if that trader is not ticked here."}
+                  : "Trusted players' buys always, others only when another followed player bought the same answer within 3 days. Repeat buys are copied too, and the robot's caps and bank are not modelled."}
               </p>
             </div>
           </div>
