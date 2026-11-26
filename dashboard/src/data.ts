@@ -20,7 +20,7 @@ async function optional<T>(name: string): Promise<T | null> {
 }
 
 async function loadAll(): Promise<Data> {
-  const [summary, runs, equity, traders, latency, robot, replay] = await Promise.all([
+  const [summary, runs, equity, traders, latency, robot, replay, replayTrades] = await Promise.all([
     get<Data["summary"]>("summary"),
     get<Data["runs"]>("runs"),
     get<Data["equity"]>("equity"),
@@ -28,8 +28,9 @@ async function loadAll(): Promise<Data> {
     get<Data["latency"]>("latency"),
     optional<NonNullable<Data["robot"]>>("robot"),
     optional<NonNullable<Data["replay"]>>("replay"),
+    optional<NonNullable<Data["replayTrades"]>>("replay_trades"),
   ]);
-  return { summary, runs, equity, traders, latency, robot, replay };
+  return { summary, runs, equity, traders, latency, robot, replay, replayTrades };
 }
 
 export function useData(): { data: Data | null; error: string | null } {
